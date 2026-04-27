@@ -91,14 +91,7 @@
 @endphp
 
 <x-layout title="Gallery | Swarna Mandapa">
-    <header class="fixed left-0 right-0 top-0 z-50 flex min-h-[80px] w-full items-center justify-center bg-white/90 px-5 py-4 shadow-sm backdrop-blur sm:min-h-[96px] sm:px-10 sm:justify-between lg:px-[72px]" aria-label="Primary navigation">
-        <a href="{{ url('/') }}" class="absolute left-5 inline-flex h-11 w-12 flex-col justify-center gap-1.5 rounded-3xl px-3 text-[#71562a] sm:static sm:w-12 lg:w-[72px] lg:px-6" aria-label="Back to home">
-            <span class="h-0.5 w-6 bg-current"></span>
-            <span class="h-0.5 w-6 bg-current"></span>
-        </a>
-        <x-brand href="{{ url('/') }}" />
-        <a href="{{ route('contact-us') }}" class="hidden rounded bg-[#c5a858] px-3 py-2 font-serif font-bold text-white no-underline transition hover:bg-[#b8892e] sm:inline-flex">Book Now</a>
-    </header>
+    <x-site-header />
 
     <main class="overflow-hidden bg-white pt-[80px] sm:pt-[96px]">
         <section class="px-5 py-8 pt-10 sm:px-10 sm:pb-16 sm:pt-14 lg:px-20 lg:pb-20 lg:pt-[82px]">

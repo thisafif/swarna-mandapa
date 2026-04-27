@@ -50,14 +50,7 @@
 @endphp
 
 <x-layout title="Swarna Mandapa">
-    <header data-scroll-header class="fixed left-0 right-0 top-0 z-50 flex min-h-[80px] w-full items-center justify-center bg-transparent px-5 py-4 transition duration-300 sm:min-h-[96px] sm:px-10 sm:justify-between lg:px-[72px]" aria-label="Primary navigation">
-        <button data-scroll-menu class="absolute left-5 inline-flex h-11 w-12 flex-col justify-center gap-1.5 rounded-3xl px-3 text-white transition duration-300 sm:static sm:w-12 lg:w-[72px] lg:px-6" aria-label="Open navigation">
-            <span class="h-0.5 w-6 bg-current"></span>
-            <span class="h-0.5 w-6 bg-current"></span>
-        </button>
-        <x-brand variant="light" />
-        <a data-scroll-cta href="{{ route('contact-us') }}" class="hidden rounded bg-white px-3 py-2 font-serif font-bold text-[#c5a858] no-underline transition duration-300 hover:bg-[#ffdc7d] sm:inline-flex">Book Now</a>
-    </header>
+    <x-site-header variant="transparent" />
 
     <main class="overflow-hidden">
         <section id="home" class="relative flex min-h-screen flex-col items-center justify-center text-white pt-[80px] sm:pt-[96px]">

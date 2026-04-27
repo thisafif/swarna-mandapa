@@ -50,6 +50,70 @@ if (scrollHeader) {
     window.addEventListener('scroll', requestHeaderUpdate, { passive: true });
 }
 
+document.querySelectorAll('[data-nav-panel]').forEach((panel) => {
+    const drawer = panel.querySelector('[data-nav-drawer]');
+    const backdrop = panel.querySelector('[data-nav-backdrop]');
+    const closeButtons = panel.querySelectorAll('[data-nav-close], [data-nav-link]');
+    const toggles = document.querySelectorAll('[data-nav-toggle]');
+    let activeToggle = null;
+    let closeTimer = null;
+    let previousBodyOverflow = '';
+
+    const setOpenState = (isOpen) => {
+        toggles.forEach((toggle) => toggle.setAttribute('aria-expanded', String(isOpen)));
+        panel.setAttribute('aria-hidden', String(!isOpen));
+    };
+
+    const openPanel = (toggle) => {
+        if (!drawer || !backdrop) {
+            return;
+        }
+
+        activeToggle = toggle;
+        previousBodyOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        window.clearTimeout(closeTimer);
+        panel.classList.remove('hidden');
+        setOpenState(true);
+
+        window.requestAnimationFrame(() => {
+            backdrop.classList.remove('opacity-0');
+            drawer.classList.remove('-translate-x-full');
+            drawer.focus({ preventScroll: true });
+        });
+    };
+
+    const closePanel = () => {
+        if (!drawer || !backdrop || panel.classList.contains('hidden')) {
+            return;
+        }
+
+        setOpenState(false);
+        backdrop.classList.add('opacity-0');
+        drawer.classList.add('-translate-x-full');
+        document.body.style.overflow = previousBodyOverflow;
+
+        closeTimer = window.setTimeout(() => {
+            panel.classList.add('hidden');
+            activeToggle?.focus({ preventScroll: true });
+            activeToggle = null;
+        }, 300);
+    };
+
+    toggles.forEach((toggle) => {
+        toggle.addEventListener('click', () => openPanel(toggle));
+    });
+
+    backdrop?.addEventListener('click', closePanel);
+    closeButtons.forEach((button) => button.addEventListener('click', closePanel));
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closePanel();
+        }
+    });
+});
+
 document.querySelectorAll('[data-gallery-tabs]').forEach((gallery) => {
     const tabs = Array.from(gallery.querySelectorAll('[data-gallery-tab]'));
     const panels = Array.from(gallery.querySelectorAll('[data-gallery-panel]'));
