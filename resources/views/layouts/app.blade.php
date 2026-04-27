@@ -1,3 +1,13 @@
+@php
+    $footerLinks = [
+        'Home' => url('/'),
+        'Features' => url('/#features'),
+        'Gallery' => route('gallery'),
+        'Reviews' => route('reviews'),
+        'Contact Us' => route('contact-us'),
+    ];
+@endphp
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,8 +20,11 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     {{-- Bootstrap Icons --}}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=pt-serif:400,400i,700,700i|pt-sans:400,700" rel="stylesheet">
     {{-- Google Fonts: Cormorant Garamond + DM Sans --}}
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
         /* =========================================
@@ -60,48 +73,6 @@
         .font-display {
             font-family: 'Cormorant Garamond', serif;
         }
-
-        /* =========================================
-           NAVBAR
-        ========================================= */
-        .navbar-swarna {
-            background: var(--white);
-            border-bottom: 1px solid var(--border);
-            padding: .9rem 0;
-        }
-
-        .navbar-brand-logo {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            line-height: 1.1;
-            text-decoration: none;
-            color: var(--text-dark);
-        }
-
-        .navbar-brand-logo .brand-main {
-            font-family: 'Cormorant Garamond', serif;
-            font-size: 1.3rem;
-            font-weight: 600;
-            letter-spacing: .18em;
-            text-transform: uppercase;
-        }
-
-        .navbar-brand-logo .brand-sub {
-            font-size: .68rem;
-            letter-spacing: .22em;
-            color: var(--text-muted);
-            text-transform: uppercase;
-        }
-
-        .nav-link-swarna {
-            font-size: 1rem;
-            font-family: 'Cormorant Garamond', serif;
-            color: var(--gold) !important;
-            transition: color .2s;
-        }
-
-        .nav-link-swarna:hover { color: var(--gold-light) !important; }
 
         /* =========================================
            BUTTONS
@@ -336,55 +307,6 @@
         }
 
         /* =========================================
-           FOOTER
-        ========================================= */
-        .footer-swarna {
-            background: #624F38;
-            color: #F8F4EC;
-            padding: 4rem 0 2rem;
-            margin-top: 4rem;
-        }
-        .footer-swarna h5 {
-            font-family: 'Cormorant Garamond', serif;
-            font-size: 1.35rem;
-            font-weight: 600;
-            margin-bottom: 1.25rem;
-            color: #fff;
-            letter-spacing: .03em;
-        }
-        .footer-swarna p, .footer-swarna .footer-link {
-            font-size: .9rem;
-            color: #E2D9CD;
-            text-decoration: none;
-            transition: color .2s;
-        }
-        .footer-swarna .footer-link:hover {
-            color: var(--gold-light);
-        }
-        .footer-social-link {
-            color: #fff;
-            font-size: 1.5rem;
-            transition: opacity .2s;
-        }
-        .footer-social-link:hover {
-            opacity: .8;
-            color: var(--gold-light);
-        }
-        .footer-icon-text {
-            display: flex;
-            align-items: flex-start;
-            gap: .75rem;
-            margin-bottom: 1rem;
-            font-size: .9rem;
-            color: #E2D9CD;
-        }
-        .footer-icon-text i {
-            font-size: 1.15rem;
-            color: #E2D9CD;
-            line-height: 1.2;
-        }
-
-        /* =========================================
            UTILITIES
         ========================================= */
         .text-gold     { color: var(--gold) !important; }
@@ -404,95 +326,15 @@
     @stack('styles')
 </head>
 <body>
-
-    {{-- ===================== NAVBAR ===================== --}}
-    <nav class="navbar navbar-swarna navbar-expand-lg">
-        <div class="container">
-            {{-- Brand --}}
-            <a class="navbar-brand-logo mx-auto mx-lg-0" href="/">
-                <img src="{{ asset('images/logo-swarna-mandapa.png') }}" alt="Swarna Mandapa Logo" height="65" style="object-fit: contain;">
-            </a>
-
-            {{-- Toggle --}}
-            <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
-                <i class="bi bi-list fs-5 text-gold"></i>
-            </button>
-
-            <div class="collapse navbar-collapse text-center mt-3 mt-lg-0" id="mainNav">
-                <ul class="navbar-nav mx-auto gap-2 gap-lg-2 mb-3 mb-lg-0">
-                    <li class="nav-item"><a class="nav-link nav-link-swarna" href="#">Features</a></li>
-                    <li class="nav-item"><a class="nav-link nav-link-swarna" href="#">Gallery</a></li>
-                    <li class="nav-item"><a class="nav-link nav-link-swarna" href="#">Reviews</a></li>
-                    <li class="nav-item"><a class="nav-link nav-link-swarna" href="#">Contact Us</a></li>
-                </ul>
-                <a href="{{ route('booking.form') }}" class="btn btn-gold d-inline-block">Book Now</a>
-            </div>
-        </div>
-    </nav>
-    {{-- ===================== END NAVBAR ===================== --}}
+    <x-site-header />
 
     {{-- ===================== MAIN CONTENT ===================== --}}
-    <main>
+    <main class="overflow-hidden pt-[80px] sm:pt-[96px]">
         @yield('content')
     </main>
     {{-- ===================== END MAIN CONTENT ===================== --}}
 
-    {{-- ===================== FOOTER ===================== --}}
-    <footer class="footer-swarna">
-        <div class="container">
-            <div class="row gy-5 gx-3 gx-lg-5">
-                <!-- Left Column -->
-                <div class="col-lg-6 text-start">
-                    <img src="{{ asset('images/logo-swarna-mandapa.png') }}" height="60" alt="Swarna Mandapa Logo" class="mb-3">
-                    <p class="mb-5" style="max-width:400px; color: #fff;">A golden sanctuary where tradition and luxury live in perfect harmony.</p>
-
-                    <h5 class="mb-3">Contact Us</h5>
-                    <div class="footer-icon-text">
-                        <i class="bi bi-geo-alt mt-1"></i>
-                        <span>Jl. Nuansa Angkasa III No.7 & 9, Ungasan, Kec. Kuta Sel., Kabupaten Badung, Bali 80361, Indonesia</span>
-                    </div>
-                    <div class="d-flex flex-wrap gap-4 mt-3">
-                        <div class="footer-icon-text mb-0">
-                            <i class="bi bi-telephone mt-1"></i>
-                            <span>+64 27 297 3575</span>
-                        </div>
-                        <div class="footer-icon-text mb-0">
-                            <i class="bi bi-envelope mt-1"></i>
-                            <span>reservations@swarnamandapa.com</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right Column -->
-                <div class="col-lg-6 text-start text-lg-end d-flex flex-column justify-content-between align-items-start align-items-lg-end mt-4 mt-lg-0">
-                    <div class="mb-5 mb-lg-4">
-                        <h5>Navigation</h5>
-                        <ul class="list-unstyled d-flex flex-column gap-3 gap-lg-2 mb-0">
-                            <li><a href="#" class="footer-link">Features</a></li>
-                            <li><a href="#" class="footer-link">Gallery</a></li>
-                            <li><a href="#" class="footer-link">Reviews</a></li>
-                            <li><a href="#" class="footer-link">Contact Us</a></li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h5 class="mb-3">Social Media</h5>
-                        <div class="d-flex justify-content-start justify-content-lg-end gap-3">
-                            <a href="#" class="footer-social-link"><i class="bi bi-instagram"></i></a>
-                            <a href="#" class="footer-social-link"><i class="bi bi-tiktok"></i></a>
-                            <a href="#" class="footer-social-link"><i class="bi bi-facebook"></i></a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <hr style="border-color: rgba(255,255,255,.1); margin: 3rem 0 1.5rem">
-            <div class="text-start">
-                <span style="font-size: .75rem; color: #bcaaa4 !important">
-                    © {{ date('Y') }} Swarna Mandapa — Uluwatu, Bali. All rights reserved.
-                </span>
-            </div>
-        </div>
-    </footer>
-    {{-- ===================== END FOOTER ===================== --}}
+    <x-site-footer :links="$footerLinks" />
 
     {{-- Bootstrap JS --}}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
