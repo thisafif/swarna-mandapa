@@ -66,7 +66,7 @@
                 <h1 class="font-brand text-[44px] font-medium leading-tight text-[#ffdc7d] sm:text-6xl lg:text-[64px]">Swarna Mandapa</h1>
                 <p class="mt-3 max-w-4xl text-lg leading-snug sm:text-2xl">A golden sanctuary where tradition and luxury live in perfect harmony.</p>
                 <div class="mt-6 grid w-full max-w-[360px] gap-1 px-4">
-                    <x-gold-button href="{{ route('contact-us') }}" class="w-full">Check Availability →</x-gold-button>
+                    <x-gold-button href="{{ route('booking.form') }}" class="w-full">Check Availability →</x-gold-button>
                     <a href="{{ route('contact-us') }}" class="font-serif text-base text-white underline-offset-4">or <strong class="underline">Contact Us</strong></a>
                 </div>
             </div>
@@ -199,7 +199,7 @@
                 Ready to Secure Your<br class="hidden sm:block"> Private Luxury Escape in Bali?
             </h2>
             <p class="font-serif text-lg font-bold text-[#71562a] sm:text-2xl">Reserve your preferred dates now!</p>
-            <x-gold-button href="{{ route('contact-us') }}" class="w-full sm:w-auto sm:px-12">Check Availability →</x-gold-button>
+            <x-gold-button href="{{ route('booking.form') }}" class="w-full sm:w-auto sm:px-12">Check Availability →</x-gold-button>
         </section>
 
         <x-site-footer :links="$footerLinks" />
