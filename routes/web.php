@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\BookingController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ReviewController;
 
 Route::get('/', function () {
     return view('index');
@@ -15,9 +16,9 @@ Route::get('/gallery', function () {
     return view('gallery');
 })->name('gallery');
 
-Route::get('/reviews', function () {
-    return view('reviews');
-})->name('reviews');
+// ─── Reviews (PUBLIC) ────────────────────────────────────────
+Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews');
+Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store'); // ← tambah ini
 
 Route::prefix('booking')->name('booking.')->group(function () {
     Route::get('/', [BookingController::class, 'form'])->name('form');
@@ -50,7 +51,7 @@ Route::get('/admin/edit-profile', function () {
 
 Route::post('/admin/edit-profile', function (\Illuminate\Http\Request $request) {
     session([
-        'admin_name' => $request->input('name', 'EGA MUTIARA'),
+        'admin_name'  => $request->input('name', 'EGA MUTIARA'),
         'admin_email' => $request->input('email', 'admin@gmail.com'),
     ]);
 
@@ -78,3 +79,9 @@ Route::post('/admin/villa-settings', function (\Illuminate\Http\Request $request
 
     return redirect()->back()->with('success', "{$promoName} config has been successfully saved!");
 });
+
+// ─── Reviews (ADMIN) ─────────────────────────────────────────
+Route::get('/admin/reviews', [ReviewController::class, 'adminIndex'])->name('admin.reviews.index');
+Route::patch('/admin/reviews/{review}/approve', [ReviewController::class, 'approve'])->name('admin.reviews.approve');
+Route::patch('/admin/reviews/{review}/reject', [ReviewController::class, 'reject'])->name('admin.reviews.reject');
+Route::delete('/admin/reviews/{review}', [ReviewController::class, 'destroy'])->name('admin.reviews.destroy');
