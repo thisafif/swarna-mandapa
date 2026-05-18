@@ -189,23 +189,46 @@
         </div>
     </div>
 
-    {{-- Ready to Pay --}}
-    <div class="panel fade-up">
-        <div class="panel-title"><i class="bi bi-lightning-charge me-2 text-gold"></i>Ready to Pay?</div>
-        <p class="text-muted-sm mb-4">Clicking Pay Now will redirect you to our secure payment gateway. Your booking status will update automatically.</p>
+    {{{-- 
+    GANTI bagian "Ready to Pay" panel di invoice.blade.php
+    Hapus seluruh blok panel "Ready to Pay?" yang lama
+    dan ganti dengan ini:
+--}}
 
-        <button class="btn btn-gold btn-gold-lg w-100 mb-3" id="btn-pay">
-            <i class="bi bi-credit-card me-2"></i>Pay Now — Rp {{ number_format($total, 0, ',', '.') }}
+{{-- Ready to Pay --}}
+<div class="panel fade-up">
+    <div class="panel-title"><i class="bi bi-lightning-charge me-2 text-gold"></i>Ready to Pay?</div>
+    <p class="text-muted-sm mb-4">
+        Clicking Pay Now will redirect you to our secure payment gateway. 
+        Your booking status will update automatically.
+    </p>
+
+    {{-- Error message jika ada --}}
+    @if ($errors->has('payment'))
+        <div class="alert alert-danger d-flex align-items-center gap-2 mb-3 rounded-3" style="font-size:.85rem">
+            <i class="bi bi-exclamation-circle-fill flex-shrink-0"></i>
+            {{ $errors->first('payment') }}
+        </div>
+    @endif
+
+    {{-- Form POST ke PaymentController --}}
+    <form action="{{ route('payment.create') }}" method="POST">
+        @csrf
+        <button type="submit" class="btn btn-gold btn-gold-lg w-100 mb-3" id="btn-pay">
+            <i class="bi bi-credit-card me-2"></i>
+            Pay Now — Rp {{ number_format($total, 0, ',', '.') }}
         </button>
-        <a href="#" class="btn btn-gold-outline w-100 mb-2" onclick="window.print()">
-            <i class="bi bi-download me-2"></i>Download Invoice (PDF)
-        </a>
-        <p class="text-center text-muted-sm mt-2">
-            <i class="bi bi-lock-fill me-1 text-gold"></i>256-bit SSL · Powered by Midtrans
-        </p>
-    </div>
+    </form>
 
+    <a href="#" class="btn btn-gold-outline w-100 mb-2" onclick="window.print(); return false;">
+        <i class="bi bi-download me-2"></i>Download Invoice (PDF)
+    </a>
+
+    <p class="text-center text-muted-sm mt-2">
+        <i class="bi bi-lock-fill me-1 text-gold"></i>256-bit SSL · Powered by DOKU
+    </p>
 </div>
+
 
 {{-- Payment Gateway Modal --}}
 <div class="modal fade modal-gateway" id="payModal" tabindex="-1">
@@ -245,9 +268,6 @@
 @endsection
 
 @push('scripts')
-<script>
-document.getElementById('btn-pay').addEventListener('click',function(){
-    new bootstrap.Modal(document.getElementById('payModal')).show();
-});
+
 </script>
 @endpush

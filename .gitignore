@@ -22,3 +22,7 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+/storage/doku_private.pem
+/doku_private.pem
+/doku_public.pem
+/doku_debug.php
