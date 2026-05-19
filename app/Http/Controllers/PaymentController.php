@@ -16,19 +16,24 @@ class PaymentController extends Controller
 
     public function __construct()
     {
-        // Strip ALL whitespace (spaces, tabs, newlines, BOM) — env values sering kotor
         $this->baseUrl   = rtrim(trim(env('DOKU_BASE_URL', 'https://api-sandbox.doku.com')), '/');
         $this->clientId  = preg_replace('/\s+/', '', env('DOKU_CLIENT_ID', ''));
         $this->secretKey = preg_replace('/\s+/', '', env('DOKU_SECRET_KEY', ''));
     }
 
     // -------------------------------------------------------------------------
-    // PUBLIC: Inisiasi pembayaran (redirect ke DOKU Checkout)
+    // PUBLIC: Inisiasi pembayaran → redirect ke DOKU Checkout
     // -------------------------------------------------------------------------
 
     public function createPayment(Request $request)
     {
-        // 1. Ambil booking dari session
+        // Validasi — method & channel hanya untuk UX di sisi kita, tidak dikirim ke DOKU
+        $request->validate([
+            'payment_method'  => 'required|in:CREDIT_CARD,VIRTUAL_ACCOUNT,EWALLET',
+            'payment_channel' => 'nullable|string',
+        ]);
+
+        // Ambil booking
         $code    = session('booking_code');
         $booking = $code ? Booking::where('booking_code', $code)->first() : null;
 
@@ -42,18 +47,27 @@ class PaymentController extends Controller
                 ->withErrors(['payment' => 'Status booking tidak valid untuk pembayaran.']);
         }
 
-        // 2. Hitung total
+        // Auto-cancel jika sudah expired
+        if ($booking->expires_at && now()->gt($booking->expires_at)) {
+            $booking->update(['status' => 'CANCELLED']);
+            return redirect()->route('booking.status', ['code' => $booking->booking_code])
+                ->withErrors(['payment' => 'Waktu pembayaran telah habis. Booking dibatalkan.']);
+        }
+
+        // Hitung total
         $base       = (float) $booking->total_price;
         $tax        = (int) round($base * 0.11);
         $fee        = (int) round($base * 0.10);
         $grandTotal = (int) ($base + $tax + $fee);
 
-        // 3. Generate order ID unik & simpan ke booking
+        // Generate order ID
         $orderId = 'INV' . time() . rand(100, 999);
         $booking->update(['payment_order_id' => $orderId]);
 
-        // 4. Hit DOKU dan redirect
         try {
+            // DOKU Checkout adalah hosted page — semua payment method ditampilkan di sana
+            // Kita tidak bisa pre-select channel lewat payload (akan error PAYMENT CHANNEL IS INACTIVE)
+            // Pilihan user di UI kita hanya untuk UX saja
             $checkoutUrl = $this->createCheckoutSession($booking, $orderId, $grandTotal);
             return redirect($checkoutUrl);
         } catch (\Exception $e) {
@@ -74,44 +88,32 @@ class PaymentController extends Controller
     {
         $rawBody = $request->getContent();
 
-        // Validasi signature — tolak kalau tidak valid
         if (! $this->validateNotificationSignature($request, $rawBody)) {
             Log::warning('[DOKU] callback: invalid signature', [
                 'headers' => $request->headers->all(),
                 'body'    => $rawBody,
             ]);
-            return response()->json([
-                'responseCode'    => '4010000',
-                'responseMessage' => 'Unauthorized',
-            ], 401);
+            return response()->json(['responseCode' => '4010000', 'responseMessage' => 'Unauthorized'], 401);
         }
 
-        // Parse payload
-        $payload = json_decode($rawBody, true) ?? [];
+        $payload           = json_decode($rawBody, true) ?? [];
         $orderId           = data_get($payload, 'order.invoice_number');
         $transactionStatus = strtoupper(data_get($payload, 'transaction.status', ''));
 
         if (! $orderId) {
-            return response()->json([
-                'responseCode'    => '4000000',
-                'responseMessage' => 'Bad Request: missing invoice_number',
-            ], 400);
+            return response()->json(['responseCode' => '4000000', 'responseMessage' => 'Bad Request'], 400);
         }
 
         $booking = Booking::where('payment_order_id', $orderId)->first();
         if (! $booking) {
             Log::warning('[DOKU] callback: booking not found', ['order_id' => $orderId]);
-            return response()->json([
-                'responseCode'    => '4040000',
-                'responseMessage' => 'Not Found',
-            ], 404);
+            return response()->json(['responseCode' => '4040000', 'responseMessage' => 'Not Found'], 404);
         }
 
-        // Tentukan status baru
         $newStatus = match ($transactionStatus) {
-            'SUCCESS' => 'CONFIRMED',
+            'SUCCESS'           => 'CONFIRMED',
             'EXPIRED', 'FAILED' => 'CANCELLED',
-            default   => $booking->status, // Jangan ubah kalau status tidak dikenal
+            default             => $booking->status,
         };
 
         $booking->update([
@@ -126,11 +128,7 @@ class PaymentController extends Controller
             'new_status' => $newStatus,
         ]);
 
-        // DOKU butuh response 200 dengan format ini
-        return response()->json([
-            'responseCode'    => '2000000',
-            'responseMessage' => 'OK',
-        ], 200);
+        return response()->json(['responseCode' => '2000000', 'responseMessage' => 'OK'], 200);
     }
 
     // -------------------------------------------------------------------------
@@ -150,68 +148,58 @@ class PaymentController extends Controller
 
     // -------------------------------------------------------------------------
     // PRIVATE: Buat checkout session ke DOKU
+    // Catatan: DOKU Checkout adalah hosted page, semua method tampil di sana.
+    // Kita hanya kirim order + customer — DOKU yang handle pilihan payment method.
     // -------------------------------------------------------------------------
 
     private function createCheckoutSession(Booking $booking, string $orderId, int $grandTotal): string
     {
         $path      = '/checkout/v1/payment';
-        // Format timestamp dengan milisecond dan +00:00 timezone
-        $timestamp = now()->setTimezone('UTC')->format('Y-m-d\TH:i:s.vO');
+        $timestamp = now()->utc()->format('Y-m-d\TH:i:s\Z');
         $requestId = (string) Str::uuid();
+        $phone     = $this->normalizePhone($booking->phone);
 
-        // Normalisasi nomor HP ke format internasional +62xxx
-        $phone = $this->normalizePhone($booking->phone);
-
-        // Build payload — hanya field wajib dulu (lebih minimal = lebih aman saat debug)
+        // Payload minimal — jangan tambah payment_method_types atau virtual_account_info
+        // DOKU akan tampilkan semua channel aktif di hosted page-nya
         $payload = [
             'order' => [
                 'invoice_number' => $orderId,
                 'amount'         => $grandTotal,
                 'currency'       => 'IDR',
             ],
+            'payment' => [
+                'payment_due_date' => 60, // menit
+            ],
             'customer' => [
                 'name'  => trim($booking->first_name . ' ' . $booking->last_name),
                 'email' => $booking->email,
                 'phone' => $phone,
             ],
-            'payment' => [
-                'payment_due_date' => 60, // menit, booking expired dalam 60 menit
-            ],
         ];
 
-        // Encode JSON — WAJIB: no escaped slashes, no escaped unicode
         $jsonBody = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $digest   = base64_encode(hash('sha256', $jsonBody, true));
 
-        // Digest = SHA-256 dari raw body, di-base64
-        $digest = base64_encode(hash('sha256', $jsonBody, true));
-
-        // Component to sign — urutan HARUS persis ini, case-sensitive
-        // TIDAK ada trailing newline di baris terakhir
+        // ✅ Digest di component-to-sign TANPA prefix "SHA-256="
         $componentToSign =
             "Client-Id:{$this->clientId}\n" .
             "Request-Id:{$requestId}\n" .
             "Request-Timestamp:{$timestamp}\n" .
             "Request-Target:{$path}\n" .
-            "Digest:SHA-256={$digest}";
+            "Digest:{$digest}";
 
-        // Tanda tangan HMAC-SHA256
         $signature = 'HMACSHA256=' . base64_encode(
             hash_hmac('sha256', $componentToSign, $this->secretKey, true)
         );
 
-        // Verify signature locally untuk debug
-        $localVerify = hash_hmac('sha256', $componentToSign, $this->secretKey);
-        $expectedB64 = base64_encode(hex2bin($localVerify));
-
-        // Debug log
-        Log::info('[DOKU] Signature Debug', [
-            'component_raw_bytes' => strlen($componentToSign),
-            'secret_key_length'   => strlen($this->secretKey),
-            'secret_key_trimmed'  => trim($this->secretKey),
-            'signature_generated' => $signature,
+        Log::info('[DOKU] Request', [
+            'order_id'       => $orderId,
+            'request_id'     => $requestId,
+            'timestamp'      => $timestamp,
+            'component_sign' => $componentToSign,
+            'payload'        => $payload,
         ]);
 
-        // Kirim ke DOKU
         $response = Http::timeout(30)
             ->withHeaders([
                 'Content-Type'      => 'application/json',
@@ -227,12 +215,8 @@ class PaymentController extends Controller
         $statusCode = $response->status();
         $result     = $response->json() ?? [];
 
-        Log::info('[DOKU] Response', [
-            'status_code' => $statusCode,
-            'body'        => $result,
-        ]);
+        Log::info('[DOKU] Response', ['status_code' => $statusCode, 'body' => $result]);
 
-        // Ambil URL dari response — DOKU bisa return di beberapa key
         $url = data_get($result, 'response.payment.url')
             ?? data_get($result, 'payment.url')
             ?? data_get($result, 'paymentUrl')
@@ -264,15 +248,10 @@ class PaymentController extends Controller
         $requestId = $request->header('Request-Id', '');
         $timestamp = $request->header('Request-Timestamp', '');
         $signature = $request->header('Signature', '');
+        $path      = $request->getPathInfo();
 
-        // Path harus persis seperti yang didaftarkan di DOKU dashboard
-        // Kalau pakai prefix /api atau /public, sesuaikan di sini
-        $path = $request->getPathInfo();
-
-        // Digest dari raw body
         $digest = base64_encode(hash('sha256', $rawBody, true));
 
-        // Rebuild component to sign dengan format yang sama
         $componentToSign =
             "Client-Id:{$clientId}\n" .
             "Request-Id:{$requestId}\n" .
@@ -284,7 +263,6 @@ class PaymentController extends Controller
             hash_hmac('sha256', $componentToSign, $this->secretKey, true)
         );
 
-        // hash_equals mencegah timing attack
         $signatureValid = hash_equals($expectedSignature, $signature);
         $clientIdValid  = hash_equals($this->clientId, $clientId);
 
@@ -294,7 +272,6 @@ class PaymentController extends Controller
                 'received'  => $signature,
                 'client_ok' => $clientIdValid,
                 'path'      => $path,
-                'digest'    => $digest,
             ]);
         }
 
@@ -307,22 +284,12 @@ class PaymentController extends Controller
 
     private function normalizePhone(string $raw): string
     {
-        // Bersihkan semua karakter selain digit dan +
         $phone = preg_replace('/[^0-9+]/', '', trim($raw));
 
-        if (str_starts_with($phone, '+62')) {
-            return $phone; // Sudah benar
-        }
+        if (str_starts_with($phone, '+62')) return $phone;
+        if (str_starts_with($phone, '62'))  return '+' . $phone;
+        if (str_starts_with($phone, '0'))   return '+62' . substr($phone, 1);
 
-        if (str_starts_with($phone, '62')) {
-            return '+' . $phone; // 62812... → +62812...
-        }
-
-        if (str_starts_with($phone, '0')) {
-            return '+62' . substr($phone, 1); // 0812... → +62812...
-        }
-
-        // Asumsi sudah tanpa kode negara, misal 812...
         return '+62' . $phone;
     }
 }

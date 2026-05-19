@@ -10,24 +10,38 @@ return new class extends Migration
     {
         Schema::create('bookings', function (Blueprint $table) {
             $table->id();
-            $table->string('booking_code')->unique(); // Kode resi unik
+            $table->string('booking_code')->unique();
+
+            // Tanggal & tamu
             $table->date('check_in');
             $table->date('check_out');
             $table->unsignedTinyInteger('guests');
+
+            // Data pemesan
             $table->string('first_name');
             $table->string('last_name');
             $table->string('email');
             $table->string('phone');
             $table->string('country', 5)->default('ID');
+
+            // Harga & promo
             $table->string('promo_code')->nullable();
             $table->decimal('price_per_night', 12, 2)->default(0);
             $table->decimal('discount_amount', 12, 2)->default(0);
             $table->decimal('total_price', 12, 2)->default(0);
+
+            // Status booking
             $table->enum('status', ['REQUESTED', 'PENDING', 'CONFIRMED', 'CANCELLED'])->default('REQUESTED');
-            $table->boolean('is_manual')->default(false); // FR-11: booking manual admin
-            $table->string('payment_ref')->nullable();    // referensi dari payment gateway
-            $table->timestamp('expires_at')->nullable();  // auto-cancel 1 jam
+            $table->boolean('is_manual')->default(false);
+            $table->timestamp('expires_at')->nullable();
             $table->text('notes')->nullable();
+
+            // Payment gateway
+            $table->string('payment_order_id')->nullable(); // invoice number yang dikirim ke DOKU
+            $table->string('payment_id')->nullable();       // transaction.id dari callback DOKU
+            $table->string('payment_ref')->nullable();      // referensi tambahan jika diperlukan
+            $table->timestamp('paid_at')->nullable();       // waktu pembayaran berhasil
+
             $table->timestamps();
         });
     }
