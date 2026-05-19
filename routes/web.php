@@ -85,3 +85,14 @@ Route::get('/admin/reviews', [ReviewController::class, 'adminIndex'])->name('adm
 Route::patch('/admin/reviews/{review}/approve', [ReviewController::class, 'approve'])->name('admin.reviews.approve');
 Route::patch('/admin/reviews/{review}/reject', [ReviewController::class, 'reject'])->name('admin.reviews.reject');
 Route::delete('/admin/reviews/{review}', [ReviewController::class, 'destroy'])->name('admin.reviews.destroy');
+
+
+// ─── API ───────────────────────────────────────────
+// ─── Booking API (untuk kalender) ────────────────────────────
+Route::get('/api/unavailable-dates', [BookingController::class, 'unavailableDates'])->name('booking.unavailable');
+
+use App\Http\Controllers\PaymentController;
+
+Route::post('/payment/create', [PaymentController::class, 'createPayment'])->name('payment.create');
+Route::post('/payment/callback', [PaymentController::class, 'callback'])->name('payment.callback');
+Route::get('/payment/return', [PaymentController::class, 'returnPage'])->name('payment.return');
