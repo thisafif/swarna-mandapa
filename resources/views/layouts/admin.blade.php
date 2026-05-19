@@ -136,7 +136,6 @@
             align-items: center;
             justify-content: flex-end;
             padding: 0 3rem;
-            border-bottom: 3px solid #6DBFF5; /* Blue line matching mockup header border, or maybe it's UI guide? I'll skip the harsh blue line if it was just a selection box. Looking closely it's a blue outline tool from Figma. I'll omit the blue line. */
             box-shadow: 0 4px 20px rgba(0,0,0,0.02);
             position: sticky;
             top: 0;
@@ -165,24 +164,12 @@
             display: flex;
             align-items: center;
             gap: 1rem;
-            cursor: pointer;
-        }
-
-        .profile-avatar {
-            width: 40px;
-            height: 40px;
-            background-color: #F0F0F0;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            color: var(--text-dark);
         }
 
         .profile-info {
             display: flex;
             flex-direction: column;
+            text-align: right;
         }
 
         .profile-name {
@@ -204,57 +191,48 @@
             flex-grow: 1;
         }
 
-        /* Smooth Dropdown Animation */
-        .dropdown-menu.show {
-            animation: dropFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-            transform-origin: top;
-        }
-        @keyframes dropFadeIn {
-            from { opacity: 0; transform: translateY(-10px) scale(0.95); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
+        /* Metrics Grid Layout */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
         }
 
-        /* Responsive Mobile Layout */
+        .metric-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
         @media (max-width: 991px) {
-            .sidebar {
-                transform: translateX(-100%);
-                transition: transform 0.3s ease;
-                box-shadow: 10px 0 30px rgba(0,0,0,0.1);
-            }
-            .sidebar.show {
-                transform: translateX(0);
-            }
-            .main-content {
-                margin-left: 0;
-                max-width: 100%;
-            }
-            .top-header {
-                padding: 0 1.5rem;
-                justify-content: space-between;
-            }
-            .mobile-toggle {
-                display: block !important;
-                font-size: 1.5rem;
-                cursor: pointer;
-                color: var(--text-dark);
-            }
-            .header-divider {
-                display: none;
-            }
-            .profile-info {
-                display: none;
-            }
-            .page-content {
-                padding: 1.5rem;
-                overflow-x: hidden;
-            }
+            .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; }
+            .sidebar.show { transform: translateX(0); }
+            .main-content { margin-left: 0; max-width: 100%; }
+            .metrics-grid { grid-template-columns: repeat(2, 1fr); }
         }
     </style>
     @stack('styles')
 </head>
 <body>
 
-    <!-- Sidebar -->
     <aside class="sidebar">
         <div class="sidebar-brand">
             <img src="{{ asset('images/logo-swarna-mandapa.png') }}" alt="Swarna Mandapa Logo">
@@ -267,6 +245,17 @@
             <a href="{{ route('admin.manual_booking') }}" class="nav-link {{ request()->routeIs('admin.manual_booking') ? 'active' : '' }}"><i class="bi bi-calendar-plus"></i> Manual Booking</a>
             <a href="{{ route('admin.booking_list') }}" class="nav-link {{ request()->routeIs('admin.booking_list') ? 'active' : '' }}"><i class="bi bi-card-list"></i> Booking List</a>
             <a href="{{ route('admin.calendar') }}" class="nav-link {{ request()->routeIs('admin.calendar') ? 'active' : '' }}"><i class="bi bi-calendar-event"></i> Availability Calendar</a>
+            
+            <a href="{{ route('admin.reviews.index') }}" class="nav-link {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}">
+                <i class="bi bi-chat-quote"></i> 
+                <span>Reviews</span>
+                @php $pendingCount = \App\Models\GuestReview::where('status','pending')->count(); @endphp
+                @if ($pendingCount > 0)
+                    <span style="margin-left: auto; background: #E05A5A; color: #fff; font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 999px;">
+                        {{ $pendingCount > 9 ? '9+' : $pendingCount }}
+                    </span>
+                @endif
+            </a>
 
             <div class="nav-section-title mt-5">CONFIGURATION</div>
             <a href="{{ route('admin.villa_settings') }}" class="nav-link {{ request()->routeIs('admin.villa_settings') ? 'active' : '' }}"><i class="bi bi-gear"></i> Villa Settings</a>
@@ -275,39 +264,27 @@
         </nav>
     </aside>
 
-    <!-- Main Content -->
     <main class="main-content">
-        <!-- Top Header -->
-        <header class="top-header border-bottom-0">
+        <header class="top-header">
             <i class="bi bi-list mobile-toggle d-none" onclick="document.querySelector('.sidebar').classList.toggle('show');"></i>
-            <div class="top-header-inner" style="margin-left: auto;">
+            <div class="top-header-inner">
                 <i class="bi bi-bell notification-bell"></i>
                 <div class="header-divider"></div>
-                <div class="user-profile dropdown">
-                    <div class="profile-avatar" data-bs-toggle="dropdown" aria-expanded="false" style="cursor: pointer;"><i class="bi bi-person"></i></div>
-                    <div class="profile-info" data-bs-toggle="dropdown" aria-expanded="false" style="cursor: pointer;">
-                        <!-- Dynamic Session Name simulation -->
-                        <span class="profile-name" style="text-transform: uppercase;">{{ session('admin_name', 'EGA MUTIARA') }}</span>
+                <div class="user-profile">
+                    <div class="profile-info">
+                        <span class="profile-name">{{ session('admin_name', 'EGA MUTIARA') }}</span>
                         <span class="profile-role">OWNER</span>
                     </div>
-                    <!-- Dropdown Modal Info Admin -->
-                    <ul class="dropdown-menu dropdown-menu-end shadow-lg" style="border:none; border-radius:12px; margin-top:12px; padding: 0.5rem 0; min-width: 220px;">
-                        <li><h6 class="dropdown-header" style="font-size:0.75rem; color:#888; letter-spacing:0.05em; padding-bottom: 0.5rem;">ADMIN MENU</h6></li>
-                        <li><a class="dropdown-item py-2" href="{{ route('admin.edit_profile') }}" style="font-size:0.9rem; font-weight:500; color:#444;"><i class="bi bi-person-gear me-2"></i> Edit Profile</a></li>
-                        <li><hr class="dropdown-divider" style="border-color:#F0F0F0; margin: 0.5rem 0;"></li>
-                        <li><a class="dropdown-item py-2 text-danger" href="{{ route('admin.login') }}" style="font-size:0.9rem; font-weight:600;"><i class="bi bi-box-arrow-right me-2"></i> Log Out</a></li>
-                    </ul>
+                    <div class="profile-avatar"><i class="bi bi-person"></i></div>
                 </div>
             </div>
         </header>
 
-        <!-- Page Content -->
         <div class="page-content">
             @yield('content')
         </div>
     </main>
 
-    <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
