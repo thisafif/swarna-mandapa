@@ -46,10 +46,11 @@ class BookingController extends Controller
 
         // Terapkan promo jika ada
         if ($request->filled('promo_code')) {
+            $checkInDate = Carbon::parse($request->check_in)->toDateString();
             $promo = Promo::where('code', strtoupper($request->promo_code))
                 ->where('is_active', true)
-                ->where('valid_from', '<=', $request->check_in)
-                ->where('valid_until', '>=', $request->check_in)
+                ->whereDate('valid_from', '<=', $checkInDate)
+                ->whereDate('valid_until', '>=', $checkInDate)
                 ->first();
 
             if ($promo) {
@@ -140,7 +141,33 @@ class BookingController extends Controller
         return view('booking.status', compact('booking'));
     }
 
-    // ── API: Tanggal tidak tersedia (untuk kalender frontend) ─────
+    
+
+    public function applyPromo(Request $request)
+{
+    $code    = strtoupper(trim($request->promo_code ?? ''));
+    $checkIn = Carbon::parse($request->check_in ?? now())->toDateString();
+
+    if (!$code) {
+        return response()->json(['valid' => false, 'message' => 'Please enter a promo code.']);
+    }
+
+    $promo = Promo::where('code', $code)
+        ->where('is_active', true)
+        ->whereDate('valid_from', '<=', $checkIn)
+        ->whereDate('valid_until', '>=', $checkIn)
+        ->first();
+
+    if ($promo) {
+        return response()->json([
+            'valid'            => true,
+            'discount_percent' => (float) $promo->discount_percent,
+            'message'          => "Promo applied! {$promo->discount_percent}% off.",
+        ]);
+    }
+
+    return response()->json(['valid' => false, 'message' => 'Invalid promo code.']);
+}
     public function unavailableDates()
     {
         return response()->json($this->getBookedDates());

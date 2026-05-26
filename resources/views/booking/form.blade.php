@@ -588,7 +588,6 @@
 ══════════════════════════════════════════════════════════ */
 const RATE = 4500000, TAX = .11, FEE = .10;
 let promoDiscount = 0;
-const PROMOS = { 'WELCOME10': .10, 'SWARNA20': .20, 'BALI15': .15 };
 const idr  = n => 'Rp ' + Math.round(n).toLocaleString('id-ID').replace(/,/g, '.');
 const fmtD = s => { if (!s) return '— select'; const d = new Date(s + 'T00:00:00'); return d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }); };
 const fmtDisplay = s => {
@@ -1000,21 +999,69 @@ function calc() {
 /* ══════════════════════════════════════════════════════════
    PROMO
 ══════════════════════════════════════════════════════════ */
-function applyPromo() {
-    const code = document.getElementById('promo-inp').value.trim().toUpperCase();
-    const el   = document.getElementById('promo-msg');
+async function applyPromo() {
+    const code    = document.getElementById('promo-inp').value.trim().toUpperCase();
+    const checkIn = document.getElementById('check_in').value || '';
+    const el      = document.getElementById('promo-msg');
+
+    if (!code) {
+        el.style.display = 'block';
+        el.style.color   = 'var(--danger)';
+        el.innerHTML     = '<i class="bi bi-x-circle me-1"></i>Please enter a promo code.';
+        return;
+    }
+
     el.style.display = 'block';
-    if (PROMOS[code]) {
-        promoDiscount = PROMOS[code];
-        el.style.color = 'var(--success)';
-        el.innerHTML   = `<i class="bi bi-check-circle me-1"></i>Promo applied! ${promoDiscount * 100}% off.`;
-        calc();
-    } else {
+    el.style.color   = 'var(--text-muted, #888)';
+    el.innerHTML     = '<i class="bi bi-hourglass-split me-1"></i>Checking...';
+
+    try {
+        // Ambil CSRF token dari cookie (lebih reliable)
+        const token = document.cookie.split(';')
+            .find(c => c.trim().startsWith('XSRF-TOKEN='))
+            ?.split('=')[1];
+        const csrfToken = token ? decodeURIComponent(token) : 
+            document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+
+        const res = await fetch('/api/apply-promo', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'X-XSRF-TOKEN': csrfToken,
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ promo_code: code, check_in: checkIn })
+        });
+
+        // Kalau masih 500, tampilkan detail errornya
+        if (!res.ok) {
+            const text = await res.text();
+            console.error('Server error:', res.status, text);
+            el.style.color = 'var(--danger)';
+            el.innerHTML   = `<i class="bi bi-x-circle me-1"></i>Server error ${res.status}. Check console.`;
+            return;
+        }
+
+        const data = await res.json();
+
+        if (data.valid) {
+            promoDiscount = data.discount_percent / 100;
+            el.style.color = 'var(--success, green)';
+            el.innerHTML   = `<i class="bi bi-check-circle me-1"></i>${data.message}`;
+            calc();
+        } else {
+            promoDiscount = 0;
+            el.style.color = 'var(--danger)';
+            el.innerHTML   = `<i class="bi bi-x-circle me-1"></i>${data.message}`;
+            calc();
+        }
+    } catch (err) {
+        console.error('Fetch error:', err);
         el.style.color = 'var(--danger)';
-        el.innerHTML   = '<i class="bi bi-x-circle me-1"></i>Invalid promo code.';
+        el.innerHTML   = '<i class="bi bi-x-circle me-1"></i>Connection error. Try again.';
     }
 }
-
 /* ══════════════════════════════════════════════════════════
    PAYMENT TABS
 ══════════════════════════════════════════════════════════ */
