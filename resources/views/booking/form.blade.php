@@ -300,15 +300,21 @@
                         <div class="invalid-hint">Please enter a valid email</div>
                     </div>
                    <div class="col-md-6">
-                        <label class="form-label-sm">Phone <span class="required-star">*</span></label>
-                        <input type="hidden" name="phone" id="phone-full">
-                        <div id="phone-group" style="display:flex;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;background:var(--cream)">
-                            <select id="phone-code-select"
-                                style="flex-shrink:0;width:90px;border:none;border-right:1px solid var(--border);
-                                       background:var(--cream);padding:.45rem .4rem;font-size:.82rem;cursor:pointer;
-                                       outline:none;color:var(--text-dark);appearance:none;-webkit-appearance:none;
-                                       background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23999'/%3E%3C/svg%3E\");
-                                       background-repeat:no-repeat;background-position:right 5px center;padding-right:18px">
+                       <label class="form-label-sm">Phone <span class="required-star">*</span>
+    <span style="font-weight:400;color:var(--text-muted);font-size:.7rem;margin-left:.35rem">
+        <i class="bi bi-globe2" style="font-size:.65rem"></i> select country code
+    </span>
+</label>
+<input type="hidden" name="phone" id="phone-full">
+<div id="phone-group" style="display:flex;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;background:var(--cream);transition:border-color .2s"
+     onmouseenter="this.style.borderColor='var(--gold)'" 
+     onmouseleave="if(document.activeElement.closest('#phone-group'))return;this.style.borderColor='var(--border)'">                            <select id="phone-code-select"
+    style="flex-shrink:0;width:105px;border:none;border-right:1px solid var(--border);
+           background:var(--cream);padding:.5rem .5rem .5rem .6rem;font-size:.82rem;cursor:pointer;
+           outline:none;color:var(--text-dark);appearance:none;-webkit-appearance:none;
+           background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23b8924a' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E\");
+           background-repeat:no-repeat;background-position:right 8px center;padding-right:26px;
+           transition:background-color .2s;font-weight:500">
                                 <option value="+93">🇦🇫 +93</option>
                                 <option value="+355">🇦🇱 +355</option>
                                 <option value="+213">🇩🇿 +213</option>
