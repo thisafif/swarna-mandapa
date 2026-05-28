@@ -26,6 +26,98 @@
         font-size: .75rem; font-weight: 500; color: var(--text-dark);
     }
     .pay-badge i { color: var(--gold) }
+
+    /* Hide "Book Now" CTA button on invoice page */
+    [data-scroll-cta] { display: none !important; }
+
+    /* Mode Print (Download PDF) - A5 Landscape */
+@media print {
+    @page {
+        size: A5 landscape;
+        margin: 0.8cm;
+    }
+
+    * { 
+        margin: 0 !important; 
+        padding: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    body { 
+        background: white !important; 
+        width: 100% !important;
+    }
+
+    /* Sembunyikan semua KECUALI invoice-box */
+    .page-header,
+    .step-wrap,
+    .btn,
+    button,
+    .navbar,
+    footer,
+    .countdown-timer,
+    .container > .panel:not(#invoice-box) { 
+        display: none !important; 
+    }
+
+    /* Sembunyikan container padding */
+    .container {
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* Tampilkan HANYA invoice-box */
+    #invoice-box {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        background: white !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 12mm !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+        page-break-after: avoid !important;
+        position: static !important;
+    }
+
+    #invoice-box * {
+        color: #000 !important;
+        background: transparent !important;
+    }
+}
+
+    /* Print-friendly text */
+    #invoice-box * {
+        color: #000 !important;
+        background: transparent !important;
+    }
+
+    /* Tampilkan invoice content */
+    #invoice-box .d-flex,
+    #invoice-box .row,
+    #invoice-box .table {
+        display: block !important;
+    }
+
+    #invoice-box .col-6 {
+        width: 50% !important;
+        display: inline-block !important;
+    }
+
+    #invoice-box table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+
+    #invoice-box th,
+    #invoice-box td {
+        border: 1px solid #ddd !important;
+        padding: 8px !important;
+        text-align: left !important;
+    }
+}
 </style>
 @endpush
 
@@ -63,28 +155,26 @@
     </div>
 
     @php
-        $bookingCode = $booking->booking_code ?? session('booking_code', 'SWM-' . date('Y') . '-XXXXXX');
-        $guestName   = isset($booking->first_name)
-                        ? trim($booking->first_name . ' ' . $booking->last_name)
-                        : trim(session('booking.first_name', 'Guest') . ' ' . session('booking.last_name', ''));
+    $bookingCode   = $booking->booking_code ?? session('booking_code', 'SWM-' . date('Y') . '-XXXXXX');
+    $guestName     = isset($booking->first_name)
+                      ? trim($booking->first_name . ' ' . $booking->last_name)
+                      : trim(session('booking.first_name','Guest').' '.session('booking.last_name',''));
 
-        $base = isset($booking->total_price) ? (float) $booking->total_price : 0;
-        if ($base === 0.0) {
-            $ci = session('booking.check_in'); $co = session('booking.check_out');
-            $nights = ($ci && $co) ? (new DateTime($ci))->diff(new DateTime($co))->days : 0;
-            $base = 5000000 * $nights;
-        }
-        $tax   = (int) round($base * 0.11);
-        $fee   = (int) round($base * 0.10);
-        $total = (int) ($base + $tax + $fee);
+    $total         = isset($booking->total_price) ? (int) $booking->total_price : 0;
+    $pricePerNight = isset($booking->price_per_night) ? (int) $booking->price_per_night : 5000000;
+    $discount      = isset($booking->discount_amount) ? (int) $booking->discount_amount : 0;
+    $promoCode     = $booking->promo_code ?? null;
 
-        $ci     = $booking->check_in  ?? session('booking.check_in');
-        $co     = $booking->check_out ?? session('booking.check_out');
-        $nights = ($ci && $co) ? (new DateTime($ci))->diff(new DateTime($co))->days : 0;
+    $ci     = $booking->check_in  ?? session('booking.check_in');
+    $co     = $booking->check_out ?? session('booking.check_out');
+    $nights = ($ci && $co) ? (new DateTime($ci))->diff(new DateTime($co))->days : 0;
+    $base   = $pricePerNight * $nights;
 
-        $expiresAt = $booking->expires_at ?? now()->addHour();
-        $expiresTs = $expiresAt instanceof \Carbon\Carbon ? $expiresAt->timestamp : strtotime($expiresAt);
-    @endphp
+    if ($total === 0) $total = $base - $discount;
+
+    $expiresAt = $booking->expires_at ?? now()->addHour();
+    $expiresTs = $expiresAt instanceof \Carbon\Carbon ? $expiresAt->timestamp : strtotime($expiresAt);
+@endphp
 
     {{-- Booking Banner --}}
     <div class="rounded-4 p-4 mb-4 text-white fade-up"
@@ -94,15 +184,23 @@
             {{ $bookingCode }}
         </div>
         <div class="mt-2 d-flex align-items-center gap-2">
-            <span class="badge" style="background:rgba(255,255,255,.2);color:#fff;border-radius:50px;font-size:.72rem;padding:.3em .9em">
-                <i class="bi bi-circle-fill me-1" style="font-size:.45rem;vertical-align:middle"></i>PENDING
-            </span>
-            <span style="font-size:.82rem;opacity:.85">Awaiting payment</span>
+            @if(isset($booking->status) && $booking->status === 'CONFIRMED')
+                <span class="badge" style="background:#22c55e;color:#fff;border-radius:50px;font-size:.72rem;padding:.3em .9em">
+                    <i class="bi bi-check-circle-fill me-1" style="font-size:.5rem;vertical-align:middle"></i>PAID
+                </span>
+                <span style="font-size:.82rem;opacity:.85">Payment successful. Your stay is confirmed!</span>
+            @else
+                <span class="badge" style="background:rgba(255,255,255,.2);color:#fff;border-radius:50px;font-size:.72rem;padding:.3em .9em">
+                    <i class="bi bi-circle-fill me-1" style="font-size:.45rem;vertical-align:middle"></i>PENDING
+                </span>
+                <span style="font-size:.82rem;opacity:.85">Awaiting payment</span>
+            @endif
         </div>
     </div>
 
-    {{-- Countdown --}}
-    <div class="d-flex align-items-center gap-2 p-3 rounded-3 mb-3 fade-up"
+    {{-- Countdown (Hanya tampil jika PENDING) --}}
+    @if(!isset($booking->status) || $booking->status === 'PENDING')
+    <div class="countdown-timer d-flex align-items-center gap-2 p-3 rounded-3 mb-3 fade-up"
          style="background:#FFF8ED;border:1px solid #F0D9A0;font-size:.82rem">
         <i class="bi bi-clock-history text-warning fs-5 flex-shrink-0"></i>
         <div>
@@ -111,6 +209,7 @@
             <span class="text-muted-sm ms-1">— or your booking will be cancelled automatically.</span>
         </div>
     </div>
+    @endif
 
     {{-- Booking Details --}}
     <div class="panel fade-up">
@@ -149,63 +248,9 @@
         </div>
     </div>
 
-    {{-- Invoice --}}
-    <div class="panel fade-up">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-                <div class="form-label-sm">Invoice</div>
-                <div class="fw-700" style="font-size:1rem">
-                    {{ $booking->payment_order_id ?? 'INV-' . strtoupper(substr(md5($bookingCode), 0, 8)) }}
-                </div>
-            </div>
-            <span class="badge badge-pending">Awaiting Payment</span>
-        </div>
-
-        <div class="row g-2 mb-3" style="font-size:.85rem">
-            <div class="col-6"><div class="form-label-sm">Booking Code</div><div class="fw-600">{{ $bookingCode }}</div></div>
-            <div class="col-6"><div class="form-label-sm">Invoice Date</div><div class="fw-600">{{ date('d M Y') }}</div></div>
-            <div class="col-6"><div class="form-label-sm">Billed To</div><div class="fw-600">{{ $guestName }}</div></div>
-            <div class="col-6"><div class="form-label-sm">Property</div><div class="fw-600">Villa Swarna Mandapa</div></div>
-        </div>
-
-        <table class="table table-borderless mb-0" style="font-size:.88rem">
-            <thead><tr style="border-bottom:1px solid var(--border)">
-                <th class="form-label-sm ps-0">Description</th>
-                <th class="form-label-sm text-end pe-0">Amount</th>
-            </tr></thead>
-            <tbody>
-                <tr>
-                    <td class="ps-0 py-2">
-                        Villa Superior
-                        @if($nights > 0)
-                            — {{ date('d M Y', strtotime($ci)) }} → {{ date('d M Y', strtotime($co)) }} ({{ $nights }} nights)
-                        @endif
-                    </td>
-                    <td class="text-end pe-0 py-2 fw-500">Rp {{ number_format($base, 0, ',', '.') }}</td>
-                </tr>
-                <tr>
-                    <td class="ps-0 py-2 text-muted-sm">Government Tax (11%)</td>
-                    <td class="text-end pe-0 py-2 text-muted-sm">Rp {{ number_format($tax, 0, ',', '.') }}</td>
-                </tr>
-                <tr>
-                    <td class="ps-0 py-2 text-muted-sm">Service Fee (10%)</td>
-                    <td class="text-end pe-0 py-2 text-muted-sm">Rp {{ number_format($fee, 0, ',', '.') }}</td>
-                </tr>
-            </tbody>
-            <tfoot>
-                <tr style="border-top:2px solid var(--border)">
-                    <td class="ps-0 pt-3 fw-700" style="font-family:'Cormorant Garamond',serif;font-size:1rem">Total Amount Due</td>
-                    <td class="text-end pe-0 pt-3" style="font-family:'Cormorant Garamond',serif;font-size:1.1rem;font-weight:600;color:var(--gold)">
-                        Rp {{ number_format($total, 0, ',', '.') }}
-                    </td>
-                </tr>
-            </tfoot>
-        </table>
-
-        <div class="mt-3 pt-3 d-flex align-items-center gap-2" style="border-top:1px solid var(--border);font-size:.8rem">
-            <i class="bi bi-exclamation-triangle text-gold flex-shrink-0"></i>
-            <span class="text-muted-sm">Non-refundable. Complete payment to confirm your booking.</span>
-        </div>
+   {{-- Invoice --}}
+    <div class="panel fade-up" id="invoice-box">
+        @include('booking.invoice-shared', ['booking' => $booking])
     </div>
 
     {{-- ═══════════════════════════════════════════════════════════
@@ -241,20 +286,27 @@
             </div>
         @endif
 
-        {{-- Form — method field tetap ada untuk validasi controller, default CREDIT_CARD --}}
-        <form action="{{ route('payment.create') }}" method="POST" id="payment-form">
-            @csrf
-            <input type="hidden" name="payment_method" value="CREDIT_CARD">
+        @if(isset($booking->status) && $booking->status === 'CONFIRMED')
+            <div class="alert alert-success d-flex align-items-center gap-2 mb-3 rounded-3" style="font-size:.85rem">
+                <i class="bi bi-check-circle-fill flex-shrink-0"></i>
+                Payment has been completed. Thank you!
+            </div>
+        @else
+            {{-- Form — method field tetap ada untuk validasi controller, default CREDIT_CARD --}}
+            <form action="{{ route('payment.create') }}" method="POST" id="payment-form">
+                @csrf
+                <input type="hidden" name="payment_method" value="CREDIT_CARD">
+                <button type="submit" class="btn btn-gold btn-gold-lg w-100 mb-3" id="btn-pay">
+                    <i class="bi bi-lock-fill me-2"></i> Pay Now — Rp {{ number_format($total, 0, ',', '.') }}
+                </button>
+            </form>
+        @endif
 
-            <button type="submit" class="btn btn-gold btn-gold-lg w-100 mb-3" id="btn-pay">
-                <i class="bi bi-lock-fill me-2"></i>
-                Pay Now — Rp {{ number_format($total, 0, ',', '.') }}
-            </button>
-        </form>
-
-        <button class="btn btn-gold-outline w-100 mb-2" onclick="window.print(); return false;">
+        <a href="{{ route('booking.invoice.pdf', ['code' => $bookingCode]) }}" 
+            target="_blank"
+            class="btn btn-gold-outline w-100 mb-2">
             <i class="bi bi-download me-2"></i>Download Invoice (PDF)
-        </button>
+        </a>
 
         <p class="text-center text-muted-sm mt-3">
             <i class="bi bi-lock-fill me-1 text-gold"></i>256-bit SSL · Powered by DOKU
@@ -266,10 +318,67 @@
 
 @push('scripts')
 <script>
+// ─── Auto-check booking status (detect payment completion) ────
+(function () {
+    let lastStatus = '{{ $booking->status ?? 'PENDING' }}';
+    const checkInterval = setInterval(async () => {
+        try {
+            const resp = await fetch('/api/booking-status/{{ $bookingCode }}', {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' }
+            });
+            const data = await resp.json();
+            
+            if (data.status && data.status !== lastStatus) {
+                lastStatus = data.status;
+                
+                if (data.status === 'CONFIRMED') {
+                    clearInterval(checkInterval);
+                    // Status changed to CONFIRMED! Redirect to status page
+                    setTimeout(() => {
+                        window.location.href = '/booking/status?code={{ $bookingCode }}';
+                    }, 500);
+                }
+            }
+        } catch (e) {
+            // Silent fail - network error is ok
+        }
+    }, 2000); // Check every 2 seconds
+    
+    // Stop checking after 2 hours
+    setTimeout(() => clearInterval(checkInterval), 7200000);
+})();
+
+// ─── Print Invoice Function ─────────────────────────────────
+function printInvoice() {
+    // Trigger print dialog
+    window.print();
+}
+
+// ─── Cleanup print mode ─────────────────────────────────────
+window.addEventListener('beforeprint', function() {
+    // Ensure invoice-box is visible
+    const invoiceBox = document.getElementById('invoice-box');
+    if (invoiceBox) {
+        invoiceBox.style.display = 'block';
+        invoiceBox.style.visibility = 'visible';
+    }
+});
+
+window.addEventListener('afterprint', function() {
+    // Restore normal view if needed
+    const invoiceBox = document.getElementById('invoice-box');
+    if (invoiceBox) {
+        invoiceBox.style.display = 'block';
+    }
+});
+
 // ─── Countdown timer ─────────────────────────────────────────
 (function () {
+    const el = document.getElementById('countdown');
+    if (!el) return; // Jika tidak ada countdown (status CONFIRMED)
+    
     const expiresAt = {{ $expiresTs }} * 1000;
-    const el  = document.getElementById('countdown');
     const btn = document.getElementById('btn-pay');
 
     function tick() {
@@ -278,7 +387,7 @@
         const s = String(diff % 60).padStart(2, '0');
         el.textContent = `${m}:${s}`;
 
-        if (diff === 0) {
+        if (diff === 0 && btn) {
             el.textContent    = 'Expired';
             el.style.color    = '#e53e3e';
             btn.disabled      = true;
@@ -287,7 +396,7 @@
             setTimeout(() => {
                 window.location.href = '{{ route('booking.status', ['code' => $bookingCode]) }}';
             }, 3000);
-        } else {
+        } else if (diff > 0) {
             setTimeout(tick, 1000);
         }
     }
@@ -295,10 +404,15 @@
 })();
 
 // ─── Prevent double-submit ───────────────────────────────────
-document.getElementById('payment-form').addEventListener('submit', function () {
-    const btn = document.getElementById('btn-pay');
-    btn.disabled  = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Redirecting to payment...';
-});
+const paymentForm = document.getElementById('payment-form');
+if (paymentForm) {
+    paymentForm.addEventListener('submit', function () {
+        const btn = document.getElementById('btn-pay');
+        if (btn) {
+            btn.disabled  = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Redirecting to payment...';
+        }
+    });
+}
 </script>
 @endpush

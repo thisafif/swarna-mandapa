@@ -3,6 +3,7 @@
 use App\Http\Controllers\BookingController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ReviewController;
+use App\Models\Admin;
 
 Route::get('/', function () {
     return view('index');
@@ -18,7 +19,7 @@ Route::get('/gallery', function () {
 
 // ─── Reviews (PUBLIC) ────────────────────────────────────────
 Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews');
-Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store'); // ← tambah ini
+Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store');
 
 Route::prefix('booking')->name('booking.')->group(function () {
     Route::get('/', [BookingController::class, 'form'])->name('form');
@@ -26,7 +27,9 @@ Route::prefix('booking')->name('booking.')->group(function () {
     Route::get('/confirmation', [BookingController::class, 'confirmation'])->name('confirmation');
     Route::post('/confirmation', [BookingController::class, 'storeConfirmation'])->name('confirmation.store');
     Route::get('/invoice', [BookingController::class, 'invoice'])->name('invoice');
+    Route::get('/invoice/pdf', [BookingController::class, 'invoicePdf'])->name('invoice.pdf');
     Route::get('/status', [BookingController::class, 'status'])->name('status');
+    Route::get('/pending', [BookingController::class, 'pending'])->name('pending');
 });
 
 Route::get('/admin/login', function () {
@@ -34,7 +37,10 @@ Route::get('/admin/login', function () {
 })->name('admin.login');
 
 Route::post('/admin/login', function (\Illuminate\Http\Request $request) {
-    if ($request->input('email') === 'admin@gmail.com' && $request->input('password') === 'admin123') {
+    $admin = Admin::authenticate($request->input('email'), $request->input('password'));
+
+    if ($admin) {
+        session(['admin_id' => $admin->id, 'admin_name' => $admin->name, 'admin_email' => $admin->email]);
         return redirect()->route('admin.dashboard');
     }
 
@@ -86,13 +92,14 @@ Route::patch('/admin/reviews/{review}/approve', [ReviewController::class, 'appro
 Route::patch('/admin/reviews/{review}/reject', [ReviewController::class, 'reject'])->name('admin.reviews.reject');
 Route::delete('/admin/reviews/{review}', [ReviewController::class, 'destroy'])->name('admin.reviews.destroy');
 
-
-// ─── API ───────────────────────────────────────────
-// ─── Booking API (untuk kalender) ────────────────────────────
+// ─── API ─────────────────────────────────────────────────────
 Route::get('/api/unavailable-dates', [BookingController::class, 'unavailableDates'])->name('booking.unavailable');
+Route::get('/api/booking-status/{code}', [BookingController::class, 'bookingStatus'])->name('api.booking.status');
 
 use App\Http\Controllers\PaymentController;
 
 Route::post('/payment/create', [PaymentController::class, 'createPayment'])->name('payment.create');
-Route::post('/payment/callback', [PaymentController::class, 'callback'])->name('payment.callback');
+Route::post('/payment/callback', [PaymentController::class, 'callback'])
+    ->name('payment.callback')
+    ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 Route::get('/payment/return', [PaymentController::class, 'returnPage'])->name('payment.return');
