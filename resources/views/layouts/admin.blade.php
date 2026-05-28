@@ -260,7 +260,10 @@
             <div class="nav-section-title mt-5">CONFIGURATION</div>
             <a href="{{ route('admin.villa_settings') }}" class="nav-link {{ request()->routeIs('admin.villa_settings') ? 'active' : '' }}"><i class="bi bi-gear"></i> Villa Settings</a>
 
-            <a href="{{ route('admin.login') }}" class="nav-link btn-logout"><i class="bi bi-box-arrow-right"></i> LOG OUT</a>
+            <form action="{{ route('admin.logout') }}" method="POST" style="margin-top: 3rem;">
+                @csrf
+                <button type="submit" class="nav-link btn-logout w-100 text-start border-0 bg-transparent" onclick="return confirm('Yakin ingin logout?')"><i class="bi bi-box-arrow-right"></i> LOG OUT</button>
+            </form>
         </nav>
     </aside>
 
