@@ -9,7 +9,10 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ReviewController;
 
 Route::get('/', function () {
-    return view('index');
+    $testimonials = \App\Models\GuestReview::where('status', 'approved')
+                        ->latest()
+                        ->get();
+    return view('index', compact('testimonials'));
 });
 
 Route::get('/contact-us', function () {
@@ -82,6 +85,10 @@ Route::middleware(['admin.auth'])->prefix('admin')->name('admin.')->group(functi
         $bookings = Booking::orderByDesc('created_at')->get();
         return view('admin.booking_list', compact('bookings'));
     })->name('booking_list');
+
+    // Booking CRUD routes
+    Route::put('/booking-list/{id}', [BookingController::class, 'updateBooking'])->name('booking.update');
+    Route::delete('/booking-list/{id}', [BookingController::class, 'destroyBooking'])->name('booking.destroy');
 
     Route::get('/availability-calendar', function () {
         return view('admin.calendar');

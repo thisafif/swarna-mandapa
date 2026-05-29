@@ -30,16 +30,6 @@
         ['icon' => 'fa-solid fa-bag-shopping', 'text' => '10 minutes to shopping & daily essentials.'],
     ];
 
-    $testimonials = [
-        ['name' => 'Raisha Shabrina', 'text' => 'Super comfy villa, great vibes, and totally made us feel at home. Loved every moment here!'],
-        ['name' => 'Nicole', 'text' => 'Beautiful stay and amazing memory to last a lifetime. The property is so beautiful with traditional Balinese design, spacious bedrooms, peaceful nights, and everything we needed for a birthday trip with friends. Ed helped us feel looked after from start to finish. 10/10 would recommend!'],
-        ['name' => 'Afif Rohman', 'text' => 'We stayed at Swarna Mandapa for our honeymoon. The villa was clean, and the private pool made going outside feel optional. Quiet, romantic, and perfect for couples who want to disappear without actually disappearing.'],
-        ['name' => 'Nabila Maharani', 'text' => 'Very nice place to stay in Bali, very comfortable and highly recommended.'],
-        ['name' => 'N Mwalaa', 'text' => 'Such a lovely place in Uluwatu! The villa feels cozy yet luxurious, very clean, and thoughtfully designed. The pool is a great spot to relax, and the whole place has a peaceful vibe that makes you slow down and enjoy the moment.'],
-        ['name' => 'Irma Fitriani', 'text' => 'Great place to stay. Smooth check in, clean rooms, and plenty of space. Everything worked well for our trip.'],
-        ['name' => 'Koalarmb Laby', 'text' => 'Amazing place to stay in Uluwatu. The villa is beautiful, spacious, and super clean, with a stunning Balinese design. The pool area is perfect for chilling, and the atmosphere is calm and relaxing.'],
-        ['name' => 'Salsa Maulida', 'text' => 'A very comfortable place to stay in Swarna Mandapa. This villa is very spacious with beautiful interior, a relaxing swimming pool, and a location close to the beach. It is highly recommended.'],
-    ];
 
     $footerLinks = [
         'Features' => '#features',
@@ -189,7 +179,7 @@
             <x-section-heading title="What Our Guests Say" class="mb-12" />
             <div class="columns-1 gap-7 md:columns-2 xl:columns-3">
                 @foreach ($testimonials as $testimonial)
-                    <x-testimonial-card :testimonial="$testimonial" :delay="$loop->index * 60" />
+                    <x-testimonial-card :testimonial="['name' => $testimonial->full_name, 'text' => $testimonial->review]" :delay="$loop->index * 60" />
                 @endforeach
             </div>
         </section>

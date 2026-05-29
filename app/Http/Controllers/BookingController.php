@@ -304,4 +304,64 @@ class BookingController extends Controller
 
         return $price ? (float) $price->price_per_night : 5000000; // default 5jt
     }
+
+    // ── ADMIN: Update Booking ─────────────────────────────────────
+    public function updateBooking(Request $request, $id)
+    {
+        $booking = Booking::findOrFail($id);
+
+        $validated = $request->validate([
+            'first_name'       => 'required|string|max:100',
+            'last_name'        => 'required|string|max:100',
+            'email'            => 'required|email',
+            'phone'            => 'required|string|max:20',
+            'check_in'         => 'required|date',
+            'check_out'        => 'required|date|after:check_in',
+            'guests'           => 'required|integer|min:1|max:10',
+            'price_per_night'  => 'required|numeric|min:0',
+            'discount_amount'  => 'required|numeric|min:0',
+            'status'           => 'required|in:PENDING,CONFIRMED,CANCELLED',
+        ]);
+
+        // Cek ketersediaan tanggal (kecuali booking ini sendiri)
+        $conflicting = Booking::whereIn('status', ['PENDING', 'CONFIRMED'])
+            ->where('id', '!=', $id)
+            ->where('check_in', '<', $validated['check_out'])
+            ->where('check_out', '>', $validated['check_in'])
+            ->exists();
+
+        if ($conflicting) {
+            return response()->json(['message' => 'Tanggal sudah dipesan oleh booking lain.'], 422);
+        }
+
+        // Hitung total price
+        $nights = Carbon::parse($validated['check_in'])->diffInDays(Carbon::parse($validated['check_out']));
+        $subtotal = $validated['price_per_night'] * $nights;
+        $totalPrice = $subtotal - $validated['discount_amount'];
+
+        $booking->update([
+            'first_name'       => $validated['first_name'],
+            'last_name'        => $validated['last_name'],
+            'email'            => $validated['email'],
+            'phone'            => $validated['phone'],
+            'check_in'         => $validated['check_in'],
+            'check_out'        => $validated['check_out'],
+            'guests'           => $validated['guests'],
+            'price_per_night'  => $validated['price_per_night'],
+            'discount_amount'  => $validated['discount_amount'],
+            'total_price'      => $totalPrice,
+            'status'           => $validated['status'],
+        ]);
+
+        return response()->json(['message' => 'Booking updated successfully', 'booking' => $booking]);
+    }
+
+    // ── ADMIN: Delete Booking ─────────────────────────────────────
+    public function destroyBooking($id)
+    {
+        $booking = Booking::findOrFail($id);
+        $booking->delete();
+
+        return redirect()->route('admin.booking_list')->with('success', 'Booking deleted successfully');
+    }
 }
