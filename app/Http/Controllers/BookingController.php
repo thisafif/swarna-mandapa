@@ -168,9 +168,95 @@ class BookingController extends Controller
 
     return response()->json(['valid' => false, 'message' => 'Invalid promo code.']);
 }
+    public function storeManualBooking(Request $request)
+    {
+        $request->validate([
+            'check_in'  => 'required|date|after_or_equal:today',
+            'check_out' => 'required|date|after:check_in',
+            'guest_name' => 'required|string|max:200',
+            'phone'      => 'required|string|max:20',
+            'guests'     => 'required|integer|min:1|max:10',
+            'email'      => 'nullable|email',
+            'notes'      => 'nullable|string|max:255',
+        ]);
+
+        if (!$this->isDateAvailable($request->check_in, $request->check_out)) {
+            return back()->withErrors(['check_in' => 'Tanggal yang dipilih sudah tidak tersedia.'])->withInput();
+        }
+
+        $nameParts = preg_split('/\s+/', trim($request->guest_name), 2);
+        $firstName = $nameParts[0] ?? 'Guest';
+        $lastName  = $nameParts[1] ?? '';
+
+        $pricePerNight = $this->getPriceForDate($request->check_in);
+        $nights        = Carbon::parse($request->check_in)->diffInDays(Carbon::parse($request->check_out));
+        $subtotal      = $pricePerNight * $nights;
+
+        Booking::create([
+            'booking_code'    => Booking::generateCode(),
+            'check_in'        => $request->check_in,
+            'check_out'       => $request->check_out,
+            'guests'          => $request->guests,
+            'first_name'      => $firstName,
+            'last_name'       => $lastName,
+            'email'           => $request->email ?? 'manual@swarnamandapa.com',
+            'phone'           => $request->phone,
+            'country'         => 'ID',
+            'promo_code'      => null,
+            'price_per_night' => $pricePerNight,
+            'discount_amount' => 0,
+            'total_price'     => $subtotal,
+            'status'          => 'CONFIRMED',
+            'is_manual'       => true,
+            'expires_at'      => null,
+            'notes'           => $request->notes,
+        ]);
+
+        return redirect()->route('admin.booking_list')->with('success', 'Manual booking berhasil disimpan dan sekarang terlihat di kalender.');
+    }
+
     public function unavailableDates()
     {
         return response()->json($this->getBookedDates());
+    }
+
+    /**
+     * API endpoint untuk kalender admin
+     * Mengembalikan: booked dates dan informasi status
+     */
+    public function getCalendarData(Request $request)
+    {
+        $year  = $request->query('year', now()->year);
+        $month = $request->query('month', now()->month);
+
+        // Tanggal awal dan akhir bulan
+        $startOfMonth = Carbon::createFromDate($year, $month, 1);
+        $endOfMonth   = $startOfMonth->copy()->endOfMonth();
+
+        // Ambil booking aktif dalam bulan ini
+        $bookings = Booking::whereIn('status', ['PENDING', 'CONFIRMED'])
+            ->where('check_out', '>', $startOfMonth)
+            ->where('check_in', '<', $endOfMonth->addDay())
+            ->get(['check_in', 'check_out', 'status']);
+
+        // Format booked dates
+        $bookedDates = [];
+        foreach ($bookings as $b) {
+            $current = Carbon::parse($b->check_in)->copy();
+            $end     = Carbon::parse($b->check_out);
+
+            while ($current->lte($end)) {
+                $bookedDates[$current->toDateString()] = [
+                    'status' => $b->status,
+                    'type'   => 'booking',
+                ];
+                $current->addDay();
+            }
+        }
+
+        return response()->json([
+            'booked' => $bookedDates,
+        ]);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -189,7 +275,7 @@ class BookingController extends Controller
             $current = Carbon::parse($b->check_in)->copy();
             $end     = Carbon::parse($b->check_out);
 
-            while ($current->lt($end)) {
+            while ($current->lte($end)) {
                 $dates[$current->toDateString()] = $b->status; // 'PENDING' atau 'CONFIRMED'
                 $current->addDay();
             }

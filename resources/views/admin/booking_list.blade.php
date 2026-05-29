@@ -332,26 +332,30 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @for($i=1; $i<=10; $i++)
-                    <tr>
-                        <td class="col-no">{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}</td>
-                        <td class="col-code">SWM-2026-0001{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}</td>
-                        <td class="col-guest">Apipupipupipupu</td>
-                        <td class="col-date">Feb 26 - 28, 2026</td>
-                        <td class="col-status">CONFIRMED</td>
-                        <td class="col-created">Feb 25, 2026 09:00</td>
-                        <td class="col-action">
-                            <a href="#" class="action-link" onclick="openDetail(); return false;">DETAIL</a>
-                        </td>
-                    </tr>
-                    @endfor
+                    @forelse($bookings as $index => $booking)
+                        <tr>
+                            <td class="col-no">{{ str_pad($index + 1, 2, '0', STR_PAD_LEFT) }}</td>
+                            <td class="col-code">{{ $booking->booking_code }}</td>
+                            <td class="col-guest">{{ $booking->first_name }} {{ $booking->last_name }}</td>
+                            <td class="col-date">{{ $booking->check_in->format('M d') }} - {{ $booking->check_out->format('M d, Y') }}</td>
+                            <td class="col-status">{{ $booking->status }}</td>
+                            <td class="col-created">{{ $booking->created_at->format('M d, Y H:i') }}</td>
+                            <td class="col-action">
+                                <a href="#" class="action-link" onclick="openDetail(); return false;">DETAIL</a>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="text-center" style="padding:2rem; color:#666;">No bookings found.</td>
+                        </tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>
 
         <!-- Footer Pagination -->
         <div class="table-footer">
-            <div class="entries-info">Showing 1-10 of 124 entries</div>
+            <div class="entries-info">Showing 1-{{ $bookings->count() }} of {{ $bookings->count() }} entries</div>
             <div class="pagination">
                 <a href="#" class="page-item"><i class="bi bi-chevron-left mt-1" style="font-size:0.7rem"></i></a>
                 <a href="#" class="page-item active">1</a>

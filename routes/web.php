@@ -1,7 +1,10 @@
 <?php
 
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\PromoController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\AdminAuthController;
+use App\Models\Booking;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ReviewController;
 
@@ -39,7 +42,21 @@ Route::middleware(['admin.auth'])->prefix('admin')->name('admin.')->group(functi
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
 
     Route::get('/dashboard', function () {
-        return view('admin.dashboard');
+        $totalBookings     = Booking::count();
+        $pendingBookings   = Booking::where('status', 'PENDING')->count();
+        $confirmedBookings = Booking::where('status', 'CONFIRMED')->count();
+        $cancelledBookings = Booking::where('status', 'CANCELLED')->count();
+        $revenue           = Booking::where('status', 'CONFIRMED')->sum('total_price');
+        $recentBookings    = Booking::orderByDesc('created_at')->take(6)->get();
+
+        return view('admin.dashboard', compact(
+            'totalBookings',
+            'pendingBookings',
+            'confirmedBookings',
+            'cancelledBookings',
+            'revenue',
+            'recentBookings'
+        ));
     })->name('dashboard');
 
     Route::get('/edit-profile', function () {
@@ -59,8 +76,11 @@ Route::middleware(['admin.auth'])->prefix('admin')->name('admin.')->group(functi
         return view('admin.manual_booking');
     })->name('manual_booking');
 
+    Route::post('/manual-booking', [BookingController::class, 'storeManualBooking'])->name('manual_booking.submit');
+
     Route::get('/booking-list', function () {
-        return view('admin.booking_list');
+        $bookings = Booking::orderByDesc('created_at')->get();
+        return view('admin.booking_list', compact('bookings'));
     })->name('booking_list');
 
     Route::get('/availability-calendar', function () {
@@ -130,23 +150,12 @@ Route::middleware(['admin.auth'])->prefix('admin')->name('admin.')->group(functi
 // ─── API ───────────────────────────────────────────
 // ─── Booking API (untuk kalender) ────────────────────────────
 Route::get('/api/unavailable-dates', [BookingController::class, 'unavailableDates'])->name('booking.unavailable');
+Route::get('/api/calendar-data', [BookingController::class, 'getCalendarData'])->name('booking.calendarData');
 Route::post('/api/apply-promo', [BookingController::class, 'applyPromo'])->name('booking.applyPromo');
-
-use App\Http\Controllers\PromoController;
-use App\Http\Controllers\PaymentController;
 
 Route::post('/payment/create', [PaymentController::class, 'createPayment'])->name('payment.create');
 Route::post('/payment/callback', [PaymentController::class, 'callback'])->name('payment.callback');
 Route::get('/payment/return', [PaymentController::class, 'returnPage'])->name('payment.return');
-
-Route::get('/api/test-promo', function() {
-    $promo = \App\Models\Promo::first();
-    return response()->json([
-        'table_exists' => true,
-        'promo_count'  => \App\Models\Promo::count(),
-        'sample'       => $promo,
-    ]);
-});
 
 Route::get('/api/test-promo', function() {
     $promo = \App\Models\Promo::first();

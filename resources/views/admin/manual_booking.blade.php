@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+﻿@extends('layouts.admin')
 
 @push('styles')
 <style>
@@ -207,94 +207,85 @@
 @section('content')
     <h1 class="page-title">Self-Manual <em>Booking</em></h1>
 
+    @if(session('success'))
+        <div class="info-alert" style="background:#E9F7EF; border-color:#D1E7DD; color:#0F5132;">
+            <i class="bi bi-check-circle"></i>
+            <div>{{ session('success') }}</div>
+        </div>
+    @endif
+
+    @if($errors->any())
+        <div class="info-alert" style="background:#FFE8E8; border-color:#F5A5A5; color:#842029;">
+            <i class="bi bi-exclamation-triangle"></i>
+            <div>
+                <ul style="margin:0; padding-left:1.25rem;">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        </div>
+    @endif
+
     <div class="form-card">
         <div class="form-body">
             <!-- Warning Box -->
             <div class="info-alert">
                 <i class="bi bi-info-circle"></i>
-                <div>System will automatically check date availability and block the calendar once you save this reservation.</div>
+                <div>System will automatically check date availability and save the booking to the database.</div>
             </div>
 
             <!-- Form -->
-            <form action="#" method="POST">
+            <form action="{{ route('admin.manual_booking.submit') }}" method="POST">
                 @csrf
                 
                 <div class="row row-form">
                     <div class="col-md-6 mb-3 mb-md-0">
                         <label class="form-label">Check-in Date</label>
-                        <input type="date" class="form-control" name="check_in" required>
+                        <input type="date" class="form-control" name="check_in" value="{{ old('check_in') }}" required>
                     </div>
                     <div class="col-md-6">
                         <!-- Corrected label from mockup (it said Check-in Date twice) -->
                         <label class="form-label">Check-out Date</label>
-                        <input type="date" class="form-control" name="check_out" required>
+                        <input type="date" class="form-control" name="check_out" value="{{ old('check_out') }}" required>
                     </div>
                 </div>
 
                 <div class="row row-form">
                     <div class="col-12">
                         <label class="form-label">Full Guest Name</label>
-                        <input type="text" class="form-control" name="guest_name" placeholder="e.g. John Doe" required>
+                        <input type="text" class="form-control" name="guest_name" value="{{ old('guest_name') }}" placeholder="e.g. John Doe" required>
                     </div>
                 </div>
 
                 <div class="row row-form mb-0">
                     <div class="col-md-6 mb-3 mb-md-0">
                         <label class="form-label">Phone / WhatsApp</label>
-                        <input type="text" class="form-control" name="phone" placeholder="e.g. +62 812..." required>
+                        <input type="text" class="form-control" name="phone" value="{{ old('phone') }}" placeholder="e.g. +62 812..." required>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Number of Guests</label>
-                        <input type="number" class="form-control" name="guests" placeholder="1" min="1" max="10" required>
+                        <input type="number" class="form-control" name="guests" value="{{ old('guests') }}" placeholder="1" min="1" max="10" required>
+                    </div>
+                </div>
+
+                <div class="row row-form">
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" name="email" value="{{ old('email') }}" placeholder="e.g. guest@example.com">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Notes</label>
+                        <input type="text" class="form-control" name="notes" value="{{ old('notes') }}" placeholder="Optional notes">
                     </div>
                 </div>
 
         </div>
         
         <div class="form-footer">
-            <button type="button" class="btn-submit" onclick="showModal()">Check & Make a reservation</button>
+            <button type="submit" class="btn-submit">Check & Make a reservation</button>
         </div>
         </form>
     </div>
 
-    <!-- Success Modal -->
-    <div class="success-modal-overlay" id="successModal">
-        <div class="success-modal-content">
-            <div class="success-icon">
-                <i class="bi bi-check"></i>
-            </div>
-            <h3 class="success-title">Reservation Created!</h3>
-            
-            <div class="reservation-details">
-                <div class="mb-2"><strong>Reference:</strong> SWM-2026-000102</div>
-                <div class="mb-2"><strong>Guest:</strong> <span id="modalGuestName">John Doe</span></div>
-                <div><strong>Timeline:</strong> <span id="modalCheckIn">...</span> &mdash; <span id="modalCheckOut">...</span></div>
-            </div>
-
-            <!-- In a real app, this goes to the booking list -->
-            <button class="btn-submit" style="width:100%; margin-bottom:0.75rem" onclick="location.href='{{ route('admin.dashboard') }}'">Go to Booking List</button>
-            <button class="btn-outline" onclick="closeModal()">Create New Booking</button>
-        </div>
-    </div>
-
-    <script>
-        function showModal() {
-            // Get form values for realistic interaction
-            const guestName = document.querySelector('input[name="guest_name"]').value || 'A New Guest';
-            const checkIn = document.querySelector('input[name="check_in"]').value || 'N/A';
-            const checkOut = document.querySelector('input[name="check_out"]').value || 'N/A';
-            
-            document.getElementById('modalGuestName').textContent = guestName;
-            document.getElementById('modalCheckIn').textContent = checkIn;
-            document.getElementById('modalCheckOut').textContent = checkOut;
-            
-            document.getElementById('successModal').classList.add('active');
-        }
-
-        function closeModal() {
-            document.getElementById('successModal').classList.remove('active');
-            // Empty the form so they can type a new one
-            document.querySelector('form').reset();
-        }
-    </script>
 @endsection

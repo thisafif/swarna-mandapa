@@ -105,6 +105,7 @@
         padding: 1rem;
         transition: transform 0.2s, box-shadow 0.2s;
         background-color: #FFFFFF;
+        cursor: pointer;
     }
 
     .day-box:hover {
@@ -120,12 +121,61 @@
         color: #7A6953;
     }
 
-    .day-box.occupied {
-        background-color: #DFCAA5; /* Accurate gold-sand fill matching mockup */
+    /* ─── Status: Booked (dari booking PENDING/CONFIRMED) ─── */
+    .day-box.booked {
+        background: linear-gradient(135deg, #DFCAA5 0%, #D4BC97 100%);
         border-color: #DFCAA5;
     }
-    .day-box.occupied .day-number {
-        color: #55442A; /* High contrast text for gold background */
+    .day-box.booked .day-number {
+        color: #55442A;
+    }
+    .day-box.booked::before {
+        content: '📅';
+        position: absolute;
+        bottom: 0.5rem;
+        left: 0.5rem;
+        font-size: 1rem;
+    }
+
+    /* ─── Status: Booked (dari booking PENDING/CONFIRMED) ─── */
+    .calendar-legend {
+        display: flex;
+        gap: 2rem;
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 1px solid #EBEBEB;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.85rem;
+        color: #666;
+    }
+
+    .legend-box {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+    }
+
+    .legend-box.booked {
+        background: linear-gradient(135deg, #DFCAA5 0%, #D4BC97 100%);
+        border-color: #DFCAA5;
+    }
+
+    .legend-box.blocked {
+        background-color: #FFE8E8;
+        border-color: #F5A5A5;
+    }
+
+    .legend-box.available {
+        background-color: #FFFFFF;
+        border-color: #F0F0F0;
     }
 
     @media (max-width: 991px) {
@@ -205,20 +255,18 @@
         document.addEventListener("DOMContentLoaded", function() {
             const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
             
-            // Dummy logic to populate occupied days. You can easily feed this array from Laravel DB Backend!
-            const occupiedDates = [
-                "2026-02-26", "2026-02-27", "2026-02-28", // Original mockup dates
-                "2026-03-14", "2026-03-15", "2026-03-16",
-                "2026-01-01", "2026-01-02", "2025-12-31" 
-            ];
+            let calendarData = {
+                booked: {},
+                blocked: {}
+            };
 
             const gridContainer = document.getElementById('calendarGrid');
             const monthDisplay = document.getElementById('monthYearDisplay');
 
-            // Default mockup date start point (Feb 2026)
-            let currentDate = new Date(2026, 1, 1); 
+            // Start dari bulan sekarang
+            let currentDate = new Date(); 
 
-            // Save the weekdays HTML so we don't accidentally wipe it out
+            // Simpan weekdays HTML
             const weekdaysHTML = `
                 @foreach(['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'] as $day)
                     <div class="calendar-weekday">
@@ -227,6 +275,19 @@
                     </div>
                 @endforeach
             `;
+
+            /**
+             * Fetch calendar data dari backend API
+             */
+            async function fetchCalendarData(year, month) {
+                try {
+                    const response = await fetch(`/api/calendar-data?year=${year}&month=${month}`);
+                    const data = await response.json();
+                    calendarData = data;
+                } catch (error) {
+                    console.error('Error fetching calendar data:', error);
+                }
+            }
 
             function renderCalendar(dateObj) {
                 const year = dateObj.getFullYear();
@@ -241,7 +302,7 @@
 
                 let htmlContent = weekdaysHTML;
 
-                // Add empty padding boxes for days of the week before the 1st
+                // Add empty padding boxes
                 for (let i = 0; i < firstDayIndex; i++) {
                     htmlContent += '<div class="day-box" style="visibility: hidden; border: none; background: transparent;"></div>';
                 }
@@ -249,22 +310,27 @@
                 // Render actual days
                 const realToday = new Date();
                 for (let day = 1; day <= totalDays; day++) {
-                    // Stringify to compare with dummy format (e.g. "2026-02-26")
                     const mStr = String(month + 1).padStart(2, '0');
                     const dStr = String(day).padStart(2, '0');
                     const dateStr = `${year}-${mStr}-${dStr}`;
 
-                    const isOccupied = occupiedDates.includes(dateStr);
+                    // Check status dari data
+                    const isBooked = calendarData.booked && calendarData.booked[dateStr];
                     const isRealToday = (realToday.getFullYear() === year && realToday.getMonth() === month && realToday.getDate() === day);
 
                     let classes = "day-box";
-                    if (isOccupied) classes += " occupied";
-                    
+                    let title = "";
+
+                    if (isBooked) {
+                        classes += " booked";
+                        title = `Booked (${isBooked.status})`;
+                    }
+
                     // Cute little gold dot indicator for "Today"
-                    let indicator = isRealToday ? '<div style="position:absolute; bottom:0.5rem; left:0.5rem; width:8px; height:8px; background-color:var(--brand-gold-dark); border-radius:50%; box-shadow: 0 0 5px rgba(0,0,0,0.1);" title="Today"></div>' : "";
+                    let indicator = isRealToday ? '<div style="position:absolute; top:0.5rem; left:0.5rem; width:8px; height:8px; background-color:var(--brand-gold-dark); border-radius:50%; box-shadow: 0 0 5px rgba(0,0,0,0.1);" title="Today"></div>' : "";
 
                     htmlContent += `
-                        <div class="${classes}">
+                        <div class="${classes}" title="${title}">
                             <span class="day-number">${day}</span>
                             ${indicator}
                         </div>
@@ -274,24 +340,47 @@
                 gridContainer.innerHTML = htmlContent;
             }
 
-            // Initial render
-            renderCalendar(currentDate);
+            /**
+             * Initialize dan fetch data
+             */
+            async function initCalendar() {
+                await fetchCalendarData(currentDate.getFullYear(), currentDate.getMonth() + 1);
+                renderCalendar(currentDate);
+            }
+
+            // Initial load
+            initCalendar();
 
             // Button Navigations
-            document.getElementById('btnPrevMonth').addEventListener('click', () => {
+            document.getElementById('btnPrevMonth').addEventListener('click', async () => {
                 currentDate.setMonth(currentDate.getMonth() - 1);
+                await fetchCalendarData(currentDate.getFullYear(), currentDate.getMonth() + 1);
                 renderCalendar(currentDate);
             });
             
-            document.getElementById('btnNextMonth').addEventListener('click', () => {
+            document.getElementById('btnNextMonth').addEventListener('click', async () => {
                 currentDate.setMonth(currentDate.getMonth() + 1);
+                await fetchCalendarData(currentDate.getFullYear(), currentDate.getMonth() + 1);
                 renderCalendar(currentDate);
             });
             
-            document.getElementById('btnToday').addEventListener('click', () => {
-                currentDate = new Date(); // Reset to real-world today
+            document.getElementById('btnToday').addEventListener('click', async () => {
+                currentDate = new Date();
+                await fetchCalendarData(currentDate.getFullYear(), currentDate.getMonth() + 1);
                 renderCalendar(currentDate);
             });
         });
     </script>
+
+    <!-- Legend -->
+    <div class="calendar-legend">
+        <div class="legend-item">
+            <div class="legend-box available"></div>
+            <span>Available</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-box booked"></div>
+            <span>📅 Booked (Reservation)</span>
+        </div>
+    </div>
 @endsection
