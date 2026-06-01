@@ -300,6 +300,13 @@
     <h1 class="page-title">Booking <em>List</em></h1>
     <div class="page-subtitle">Recent Transaction</div>
 
+    @if(session('success'))
+        <div class="alert alert-success" style="background:#edf7ed; color:#1e4620; padding:1rem; border-radius:8px; margin-bottom:1.5rem; text-align:center; font-weight:600;">{{ session('success') }}</div>
+    @endif
+    @if(session('error'))
+        <div class="alert alert-danger" style="background:#fee2e2; color:#ef4444; padding:1rem; border-radius:8px; margin-bottom:1.5rem; text-align:center; font-weight:600;">{{ session('error') }}</div>
+    @endif
+
     <div class="table-card">
         <!-- Toolbar -->
         <div class="table-toolbar">
@@ -332,32 +339,32 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @for($i=1; $i<=10; $i++)
+                    @forelse($bookings as $index => $booking)
                     <tr>
-                        <td class="col-no">{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}</td>
-                        <td class="col-code">SWM-2026-0001{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}</td>
-                        <td class="col-guest">Apipupipupipupu</td>
-                        <td class="col-date">Feb 26 - 28, 2026</td>
-                        <td class="col-status">CONFIRMED</td>
-                        <td class="col-created">Feb 25, 2026 09:00</td>
+                        <td class="col-no">{{ str_pad($index + $bookings->firstItem(), 2, '0', STR_PAD_LEFT) }}</td>
+                        <td class="col-code">{{ $booking->booking_code }}</td>
+                        <td class="col-guest">{{ $booking->first_name }} {{ $booking->last_name }}</td>
+                        <td class="col-date">{{ date('M d', strtotime($booking->check_in)) }} - {{ date('M d, Y', strtotime($booking->check_out)) }}</td>
+                        <td class="col-status">{{ $booking->status }}</td>
+                        <td class="col-created">{{ $booking->created_at->format('M d, Y H:i') }}</td>
                         <td class="col-action">
-                            <a href="#" class="action-link" onclick="openDetail(); return false;">DETAIL</a>
+                            <a href="#" class="action-link" onclick="openDetail('{{ $booking->booking_code }}', '{{ $booking->status }}', '{{ addslashes($booking->first_name . ' ' . $booking->last_name) }}', '{{ addslashes($booking->phone) }}', '{{ addslashes($booking->email) }}', '{{ date('d M Y', strtotime($booking->check_in)) }}', '{{ date('d M Y', strtotime($booking->check_out)) }}', '{{ number_format($booking->total_price, 0, ',', '.') }}'); return false;">DETAIL</a>
                         </td>
                     </tr>
-                    @endfor
+                    @empty
+                    <tr>
+                        <td colspan="7" class="text-center py-4">No bookings found.</td>
+                    </tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>
 
         <!-- Footer Pagination -->
         <div class="table-footer">
-            <div class="entries-info">Showing 1-10 of 124 entries</div>
+            <div class="entries-info">Showing {{ $bookings->firstItem() ?? 0 }}-{{ $bookings->lastItem() ?? 0 }} of {{ $bookings->total() }} entries</div>
             <div class="pagination">
-                <a href="#" class="page-item"><i class="bi bi-chevron-left mt-1" style="font-size:0.7rem"></i></a>
-                <a href="#" class="page-item active">1</a>
-                <a href="#" class="page-item">2</a>
-                <a href="#" class="page-item">3</a>
-                <a href="#" class="page-item"><i class="bi bi-chevron-right mt-1" style="font-size:0.7rem"></i></a>
+                {{ $bookings->links('pagination::bootstrap-4') }}
             </div>
         </div>
     </div>
@@ -373,9 +380,9 @@
             <div class="dp-section">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div class="dp-label mb-0">Booking Ref</div>
-                    <div class="dp-status">CONFIRMED</div>
+                    <div class="dp-status" id="detailStatus">CONFIRMED</div>
                 </div>
-                <div class="dp-value" style="font-size:1.2rem; color:var(--brand-gold-dark); font-weight:700;">SWM-2026-000101</div>
+                <div class="dp-value" id="detailCode" style="font-size:1.2rem; color:var(--brand-gold-dark); font-weight:700;">-</div>
             </div>
 
             <hr style="border-color:#EBEBEB; margin: 1.5rem 0;">
@@ -383,10 +390,10 @@
             <div class="dp-section">
                 <div class="dp-label">Guest Information</div>
                 <div class="dp-value">
-                    <strong style="font-size: 1.05rem;">Apipupipupipupu</strong><br>
+                    <strong style="font-size: 1.05rem;" id="detailName">-</strong><br>
                     <span style="color:#666; font-size:0.85rem; display:inline-block; margin-top:0.4rem;">
-                        <i class="bi bi-whatsapp" style="margin-right:0.3rem"></i> +62 812-3456-7890<br>
-                        <i class="bi bi-envelope" style="margin-right:0.3rem"></i> apip@example.com
+                        <i class="bi bi-whatsapp" style="margin-right:0.3rem"></i> <span id="detailPhone">-</span><br>
+                        <i class="bi bi-envelope" style="margin-right:0.3rem"></i> <span id="detailEmail">-</span>
                     </span>
                 </div>
             </div>
@@ -396,11 +403,11 @@
                 <div class="dp-value-group mb-3">
                     <div>
                         <div style="font-size:0.75rem; color:#888; font-weight: 600; margin-bottom: 0.2rem;">Check-in</div>
-                        <div style="font-weight:700; color:#222;">26 Feb 2026</div>
+                        <div style="font-weight:700; color:#222;" id="detailCin">-</div>
                     </div>
                     <div>
                         <div style="font-size:0.75rem; color:#888; font-weight: 600; margin-bottom: 0.2rem;">Check-out</div>
-                        <div style="font-weight:700; color:#222;">28 Feb 2026</div>
+                        <div style="font-weight:700; color:#222;" id="detailCout">-</div>
                     </div>
                 </div>
                 <div class="p-3" style="background: #FDFBF7; border: 1px solid #EBE4D5; border-radius: 8px;">
@@ -416,19 +423,58 @@
                 <div class="dp-label">Payment Breakdown</div>
                 <div class="d-flex justify-content-between mb-2">
                     <span style="font-size:0.9rem; color:#555;">Payment Method</span>
-                    <span style="font-size:0.9rem; font-weight:600;">Credit Card</span>
+                    <span style="font-size:0.9rem; font-weight:600;">DOKU Gateway</span>
                 </div>
                 <div class="d-flex justify-content-between mt-3 pt-3" style="border-top: 1px dashed #DDD;">
                     <span style="font-size:0.9rem; color:#222; font-weight: 600;">Total Amount</span>
-                    <span style="font-size:1.1rem; font-weight:700; color:var(--brand-gold-dark);">$ 2,400</span>
+                    <span style="font-size:1.1rem; font-weight:700; color:var(--brand-gold-dark);" id="detailTotal">-</span>
                 </div>
+            </div>
+
+            <!-- Cancel Action Section -->
+            <div class="dp-section" id="cancelActionSection" style="display:none; margin-top:2rem;">
+                <form id="cancelBookingForm" action="" method="POST" onsubmit="return confirm('Are you sure you want to cancel this booking? This will free up the dates.');">
+                    @csrf
+                    <button type="submit" style="width:100%; background-color:#ef4444; border:none; border-radius:8px; padding:0.85rem; color:#fff; font-weight:600; cursor:pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#dc2626'" onmouseout="this.style.backgroundColor='#ef4444'">Cancel Booking</button>
+                </form>
             </div>
         </div>
     </div>
 
     <!-- Script to toggle offcanvas -->
     <script>
-        function openDetail() {
+        function openDetail(code, status, name, phone, email, cin, cout, total) {
+            document.getElementById('detailCode').textContent = code;
+            document.getElementById('detailStatus').textContent = status;
+            
+            // Adjust status badge color
+            const statusBadge = document.getElementById('detailStatus');
+            if(status === 'PENDING') {
+                statusBadge.style.background = '#FFF3F3';
+                statusBadge.style.color = '#E05A5A';
+            } else if (status === 'CONFIRMED') {
+                statusBadge.style.background = '#Edf7ed';
+                statusBadge.style.color = '#1E4620';
+            } else {
+                statusBadge.style.background = '#F0F0F0';
+                statusBadge.style.color = '#555';
+            }
+
+            document.getElementById('detailName').textContent = name;
+            document.getElementById('detailPhone').textContent = phone || '-';
+            document.getElementById('detailEmail').textContent = email || '-';
+            document.getElementById('detailCin').textContent = cin;
+            document.getElementById('detailCout').textContent = cout;
+            document.getElementById('detailTotal').textContent = 'Rp ' + total;
+
+            // Handle Cancel Booking Form Action
+            if(status === 'PENDING' || status === 'CONFIRMED') {
+                document.getElementById('cancelActionSection').style.display = 'block';
+                document.getElementById('cancelBookingForm').action = "/admin/bookings/" + code + "/cancel";
+            } else {
+                document.getElementById('cancelActionSection').style.display = 'none';
+            }
+
             document.getElementById('detailBackdrop').classList.add('show');
             document.getElementById('detailPanel').classList.add('show');
         }

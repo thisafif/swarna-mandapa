@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\AdminAuthController;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PromoController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ReviewController;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('index');
@@ -27,6 +29,7 @@ Route::prefix('booking')->name('booking.')->group(function () {
     Route::get('/confirmation', [BookingController::class, 'confirmation'])->name('confirmation');
     Route::post('/confirmation', [BookingController::class, 'storeConfirmation'])->name('confirmation.store');
     Route::get('/invoice', [BookingController::class, 'invoice'])->name('invoice');
+    Route::get('/invoice/pdf', [BookingController::class, 'downloadPdf'])->name('invoice.pdf');
     Route::get('/status', [BookingController::class, 'status'])->name('status');
 });
 
@@ -39,7 +42,21 @@ Route::middleware(['admin.auth'])->prefix('admin')->name('admin.')->group(functi
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
 
     Route::get('/dashboard', function () {
-        return view('admin.dashboard');
+        $totalBookings = \App\Models\Booking::count();
+        $pendingBookings = \App\Models\Booking::where('status', 'PENDING')->count();
+        $confirmedBookings = \App\Models\Booking::where('status', 'CONFIRMED')->count();
+        $declinedBookings = \App\Models\Booking::whereIn('status', ['CANCELLED', 'FAILED', 'EXPIRED'])->count();
+        $revenue = \App\Models\Booking::where('status', 'CONFIRMED')->sum('total_price');
+        $recentTransactions = \App\Models\Booking::orderBy('created_at', 'desc')->take(6)->get();
+
+        return view('admin.dashboard', compact(
+            'totalBookings', 
+            'pendingBookings', 
+            'confirmedBookings', 
+            'declinedBookings', 
+            'revenue', 
+            'recentTransactions'
+        ));
     })->name('dashboard');
 
     Route::get('/edit-profile', function () {
@@ -48,7 +65,7 @@ Route::middleware(['admin.auth'])->prefix('admin')->name('admin.')->group(functi
 
     Route::post('/edit-profile', function (\Illuminate\Http\Request $request) {
         session([
-            'admin_name'  => $request->input('name', 'EGA MUTIARA'),
+            'admin_name'  => $request->input('name', 'MEGA MUTIARA'),
             'admin_email' => $request->input('email', 'admin@gmail.com'),
         ]);
 
@@ -59,12 +76,34 @@ Route::middleware(['admin.auth'])->prefix('admin')->name('admin.')->group(functi
         return view('admin.manual_booking');
     })->name('manual_booking');
 
+    Route::post('/manual-booking', [App\Http\Controllers\BookingController::class, 'storeManual'])->name('manual_booking.store');
+
     Route::get('/booking-list', function () {
-        return view('admin.booking_list');
+        $bookings = \App\Models\Booking::orderBy('created_at', 'desc')->paginate(15);
+        return view('admin.booking_list', compact('bookings'));
     })->name('booking_list');
 
+    Route::post('/bookings/{code}/cancel', [App\Http\Controllers\BookingController::class, 'cancelBooking'])->name('bookings.cancel');
+
+
     Route::get('/availability-calendar', function () {
-        return view('admin.calendar');
+        $bookings = \App\Models\Booking::whereIn('status', ['PENDING', 'CONFIRMED'])
+            ->get(['check_in', 'check_out', 'first_name', 'last_name', 'status', 'booking_code']);
+
+        $occupiedDates = [];
+        foreach ($bookings as $b) {
+            $current = \Carbon\Carbon::parse($b->check_in)->copy();
+            $end = \Carbon\Carbon::parse($b->check_out);
+            while ($current->lt($end)) {
+                $occupiedDates[$current->toDateString()] = [
+                    'guest' => $b->first_name . ' ' . $b->last_name,
+                    'status' => $b->status,
+                    'code' => $b->booking_code
+                ];
+                $current->addDay();
+            }
+        }
+        return view('admin.calendar', ['occupiedDatesJson' => json_encode($occupiedDates)]);
     })->name('calendar');
 
     Route::get('/villa-settings', function () {
@@ -131,9 +170,6 @@ Route::middleware(['admin.auth'])->prefix('admin')->name('admin.')->group(functi
 // ─── Booking API (untuk kalender) ────────────────────────────
 Route::get('/api/unavailable-dates', [BookingController::class, 'unavailableDates'])->name('booking.unavailable');
 Route::post('/api/apply-promo', [BookingController::class, 'applyPromo'])->name('booking.applyPromo');
-
-use App\Http\Controllers\PromoController;
-use App\Http\Controllers\PaymentController;
 
 Route::post('/payment/create', [PaymentController::class, 'createPayment'])->name('payment.create');
 Route::post('/payment/callback', [PaymentController::class, 'callback'])->name('payment.callback');

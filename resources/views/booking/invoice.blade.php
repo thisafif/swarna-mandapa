@@ -1,6 +1,6 @@
 {{-- resources/views/booking/invoice.blade.php --}}
 @extends('layouts.app')
-@section('title', 'Invoice & Payment — Swarna Mandapa')
+@section('title', 'Invoice & Payment - Swarna Mandapa')
 
 @push('styles')
 <style>
@@ -26,6 +26,43 @@
         font-size: .75rem; font-weight: 500; color: var(--text-dark);
     }
     .pay-badge i { color: var(--gold) }
+
+    /* ── Print Styles ── */
+    @media print {
+        /* Hide Site Footer and Sidebar Navigation */
+        footer, [data-nav-panel] { display: none !important; }
+        
+        /* Hide Header buttons/menus, keep only the Logo */
+        header button, header a[data-scroll-cta] { display: none !important; }
+        header { 
+            position: relative !important; 
+            background: transparent !important; 
+            box-shadow: none !important; 
+            border: none !important;
+            min-height: auto !important;
+            padding: 10px 0 !important;
+        }
+
+        /* Hide everything except the invoice panel */
+        .page-header, .step-wrap, .container > div:not(.invoice-print-panel) { 
+            display: none !important; 
+        }
+        
+        /* Ensure the invoice panel shows up properly */
+        .invoice-print-panel { 
+            display: block !important; 
+            box-shadow: none !important; 
+            border: 1px solid #ddd !important; 
+            padding: 15px !important;
+            margin-top: 15px !important;
+            page-break-inside: avoid;
+        }
+
+        /* Clean up layout for print */
+        body { background: #fff !important; padding: 0 !important; }
+        .container { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+        .table td { padding: 6px 0 !important; }
+    }
 </style>
 @endpush
 
@@ -150,7 +187,7 @@
     </div>
 
     {{-- Invoice --}}
-    <div class="panel fade-up">
+    <div class="panel fade-up invoice-print-panel">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
                 <div class="form-label-sm">Invoice</div>
@@ -253,7 +290,7 @@
         </form>
 
         <button class="btn btn-gold-outline w-100 mb-2" onclick="window.print(); return false;">
-            <i class="bi bi-download me-2"></i>Download Invoice (PDF)
+            <i class="bi bi-printer me-2"></i> Print / Download PDF
         </button>
 
         <p class="text-center text-muted-sm mt-3">

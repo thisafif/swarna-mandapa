@@ -12,8 +12,8 @@
         ? 'absolute left-5 inline-flex h-11 w-12 flex-col justify-center gap-1.5 rounded-3xl px-3 text-white transition duration-300 sm:static sm:w-12 lg:w-[72px] lg:px-6'
         : 'absolute left-5 inline-flex h-11 w-12 flex-col justify-center gap-1.5 rounded-3xl px-3 text-[#71562a] transition duration-300 sm:static sm:w-12 lg:w-[72px] lg:px-6';
     $ctaClass = $isTransparent
-        ? 'hidden rounded bg-white px-3 py-2 font-serif font-bold text-[#c5a858] no-underline transition duration-300 hover:bg-[#ffdc7d] sm:inline-flex'
-        : 'hidden rounded bg-[#c5a858] px-3 py-2 font-serif font-bold text-white no-underline transition hover:bg-[#b8892e] sm:inline-flex';
+        ? 'hidden rounded bg-white px-3 py-2 font-serif font-bold text-[#c5a858] !no-underline transition duration-300 hover:bg-[#ffdc7d] sm:inline-flex'
+        : 'hidden rounded bg-[#c5a858] px-3 py-2 font-serif font-bold text-white !no-underline transition hover:bg-[#b8892e] sm:inline-flex';
     $navLinks = [
         'Home' => url('/'),
         'Features' => url('/#features'),
@@ -45,7 +45,7 @@
 
             <nav class="grid gap-1" aria-label="Main navigation">
                 @foreach ($navLinks as $label => $href)
-                    <a href="{{ $href }}" class="group flex items-center justify-between border-b border-[#e4dcc8] py-4 font-serif text-2xl text-[#71562a] no-underline transition hover:text-[#b8892e]" data-nav-link>
+                    <a href="{{ $href }}" class="group flex items-center justify-between border-b border-[#e4dcc8] py-4 !font-serif text-2xl !text-[#71562a] !no-underline transition hover:!text-[#b8892e]" data-nav-link>
                         <span>{{ $label }}</span>
                         <i class="fa-solid fa-arrow-right text-sm opacity-40 transition group-hover:translate-x-1 group-hover:opacity-100" aria-hidden="true"></i>
                     </a>
@@ -54,7 +54,7 @@
         </div>
 
         <div class="grid gap-5">
-            <a href="{{ route('booking.form') }}" class="inline-flex min-h-12 items-center justify-center rounded bg-[#c5a858] px-5 py-3 font-serif font-bold text-white no-underline transition hover:bg-[#b8892e]" data-nav-link>Book Now</a>
+            <a href="{{ route('booking.form') }}" class="inline-flex min-h-12 items-center justify-center rounded bg-[#c5a858] px-5 py-3 font-serif font-bold text-white !no-underline transition hover:bg-[#b8892e]" data-nav-link>Book Now</a>
             <p class="font-serif text-sm leading-relaxed text-[#71562a]/75">A golden sanctuary where tradition and luxury live in perfect harmony.</p>
         </div>
     </aside>
