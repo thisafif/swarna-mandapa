@@ -139,11 +139,62 @@ class PaymentController extends Controller
     {
         $code = session('booking_code');
 
-        if ($code && Booking::where('booking_code', $code)->exists()) {
-            return redirect()->route('booking.status', ['code' => $code]);
+        if ($code) {
+            $booking = Booking::where('booking_code', $code)->first();
+            if ($booking) {
+                // If still pending, actively pull status from DOKU (helps local testing where webhooks fail)
+                if ($booking->status === 'PENDING' && $booking->payment_order_id) {
+                    $this->pullDokuStatus($booking);
+                }
+                return redirect()->route('booking.status', ['code' => $code]);
+            }
         }
 
         return redirect()->route('booking.form');
+    }
+
+    // -------------------------------------------------------------------------
+    // PRIVATE: Pull status from DOKU (GET)
+    // -------------------------------------------------------------------------
+    private function pullDokuStatus(Booking $booking): void
+    {
+        $path      = '/orders/v1/status/' . $booking->payment_order_id;
+        $timestamp = now()->utc()->format('Y-m-d\TH:i:s\Z');
+        $requestId = (string) Str::uuid();
+        
+        $digest = base64_encode(hash('sha256', '', true));
+
+        $componentToSign =
+            "Client-Id:{$this->clientId}\n" .
+            "Request-Id:{$requestId}\n" .
+            "Request-Timestamp:{$timestamp}\n" .
+            "Request-Target:{$path}\n" .
+            "Digest:{$digest}";
+
+        $signature = 'HMACSHA256=' . base64_encode(hash_hmac('sha256', $componentToSign, $this->secretKey, true));
+
+        try {
+            $response = Http::timeout(10)
+                ->withHeaders([
+                    'Client-Id'         => $this->clientId,
+                    'Request-Id'        => $requestId,
+                    'Request-Timestamp' => $timestamp,
+                    'Signature'         => $signature,
+                    'Digest'            => 'SHA-256=' . $digest,
+                ])
+                ->get($this->baseUrl . $path);
+
+            if ($response->successful()) {
+                $status = strtoupper(data_get($response->json(), 'transaction.status', ''));
+                if ($status === 'SUCCESS') {
+                    $booking->update(['status' => 'CONFIRMED', 'paid_at' => now()]);
+                } elseif (in_array($status, ['FAILED', 'EXPIRED'])) {
+                    $booking->update(['status' => 'CANCELLED']);
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('[DOKU] pull status failed: ' . $e->getMessage());
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -166,6 +217,7 @@ class PaymentController extends Controller
                 'invoice_number' => $orderId,
                 'amount'         => $grandTotal,
                 'currency'       => 'IDR',
+                'callback_url'   => route('payment.return'), // Redirect user back to merchant after payment
             ],
             'payment' => [
                 'payment_due_date' => 60, // menit

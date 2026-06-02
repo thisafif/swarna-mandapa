@@ -141,6 +141,83 @@ class BookingController extends Controller
         return view('booking.status', compact('booking'));
     }
 
+    // ── Admin: Manual Booking ─────────────────────────────────────
+    public function storeManual(Request $request)
+    {
+        $request->validate([
+            'check_in'   => 'required|date',
+            'check_out'  => 'required|date|after:check_in',
+            'guest_name' => 'required|string|max:100',
+            'phone'      => 'required|string|max:20',
+            'guests'     => 'required|integer|min:1|max:10',
+        ]);
+
+        if (!$this->isDateAvailable($request->check_in, $request->check_out)) {
+            return back()->with('error', 'Tanggal yang dipilih sudah tidak tersedia.');
+        }
+
+        $pricePerNight = $this->getPriceForDate($request->check_in);
+        $nights = Carbon::parse($request->check_in)->diffInDays(Carbon::parse($request->check_out));
+        $totalPrice = $pricePerNight * $nights;
+
+        $names = explode(' ', $request->guest_name, 2);
+        $firstName = $names[0];
+        $lastName = $names[1] ?? '';
+
+        $booking = Booking::create([
+            'booking_code'    => Booking::generateCode(),
+            'check_in'        => $request->check_in,
+            'check_out'       => $request->check_out,
+            'guests'          => $request->guests,
+            'first_name'      => $firstName,
+            'last_name'       => $lastName,
+            'email'           => 'manual@swarnamandapa.com',
+            'phone'           => $request->phone,
+            'country'         => 'ID',
+            'price_per_night' => $pricePerNight,
+            'discount_amount' => 0,
+            'total_price'     => $totalPrice,
+            'status'          => 'CONFIRMED',
+            'expires_at'      => null,
+        ]);
+
+        return back()->with([
+            'success' => true,
+            'booking_code' => $booking->booking_code,
+            'guest_name' => $request->guest_name,
+            'check_in' => $request->check_in,
+            'check_out' => $request->check_out
+        ]);
+    }
+
+    public function cancelBooking($code)
+    {
+        $booking = Booking::where('booking_code', $code)->firstOrFail();
+        
+        if (in_array($booking->status, ['PENDING', 'CONFIRMED'])) {
+            $booking->update(['status' => 'CANCELLED']);
+            return back()->with('success', 'Booking ' . $code . ' berhasil dibatalkan.');
+        }
+        
+        return back()->with('error', 'Booking ini sudah tidak dapat dibatalkan.');
+    }
+
+    // ── Download PDF ──────────────────────────────────────────────
+    public function downloadPdf()
+    {
+        $code    = session('booking_code');
+        $booking = $code ? Booking::where('booking_code', $code)->first() : null;
+
+        if (!$booking) {
+            $data = session('booking', []);
+            $booking = (object) $data;
+        }
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('booking.invoice-pdf', compact('booking'));
+        
+        return $pdf->download('Booking_Voucher_' . ($booking->booking_code ?? 'Draft') . '.pdf');
+    }
+
     
 
     public function applyPromo(Request $request)

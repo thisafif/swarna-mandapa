@@ -1,6 +1,6 @@
 {{-- resources/views/booking/status.blade.php --}}
 @extends('layouts.app')
-@section('title', 'Booking Status — Swarna Mandapa')
+@section('title', 'Booking Status - Swarna Mandapa')
 
 @push('styles')
 <style>
@@ -35,12 +35,64 @@
     .step-item.done .step-dot{border-color:var(--gold);background:var(--gold);color:#fff}
     .step-lbl{font-size:.65rem;letter-spacing:.07em;color:var(--text-muted);text-transform:uppercase}
     .step-item.done .step-lbl{color:var(--gold);font-weight:600}
+
+    /* ── Print Styles ── */
+    @media print {
+        /* Hide Site Footer */
+        footer, [data-nav-panel] { display: none !important; }
+        
+        /* Hide Header buttons/menus, keep only the Logo */
+        header button, header a[data-scroll-cta] { display: none !important; }
+        header { 
+            position: relative !important; 
+            background: transparent !important; 
+            box-shadow: none !important; 
+            border: none !important;
+            min-height: auto !important;
+            padding: 10px 0 !important;
+        }
+
+        /* Hide interactive elements and specific panels */
+        .print-hide, .btn { display: none !important; }
+        
+        /* Clean up layout for print */
+        body { background: #fff !important; padding: 0 !important; }
+        
+        .container { 
+            max-width: 100% !important; 
+            padding: 0 !important; 
+            margin: 0 !important;
+        }
+        
+        .panel { 
+            box-shadow: none !important; 
+            border: 1px solid #ddd !important; 
+            page-break-inside: avoid;
+            margin-bottom: 15px !important;
+            padding: 15px !important;
+        }
+        
+        /* Compress the large Success Card */
+        .panel.text-center {
+            padding-top: 1.5rem !important;
+            padding-bottom: 1.5rem !important;
+        }
+        
+        .success-ring { width: 50px !important; height: 50px !important; margin-bottom: 10px !important; }
+        .success-circle { width: 35px !important; height: 35px !important; }
+        .success-circle i { font-size: 1.2rem !important; }
+        h2 { font-size: 1.7rem !important; margin-bottom: 5px !important; }
+        p.text-muted-sm { margin-bottom: 15px !important; font-size: 0.8rem !important; }
+        
+        /* Compress table padding */
+        .table td { padding: 4px 0 !important; }
+    }
 </style>
 @endpush
 
 @section('content')
 
-<div class="page-header fade-up">
+<div class="page-header fade-up print-hide">
     <span class="section-label">Reservations</span>
     <h1>Track Your <em>Booking</em></h1>
     <p>Your booking status and details are shown below.</p>
@@ -49,7 +101,7 @@
 <div class="container pb-5" style="max-width:760px">
 
     {{-- Steps — All Done --}}
-    <div class="step-wrap">
+    <div class="step-wrap print-hide">
         @foreach(['Details','Confirm','Payment','Done'] as $s)
         <div class="step-item done">
             <div class="step-dot"><i class="bi bi-check-lg" style="font-size:.65rem"></i></div>
@@ -92,7 +144,7 @@
     </div>
 
     {{-- ── SEARCH ── --}}
-    <div class="panel fade-up">
+    <div class="panel fade-up print-hide">
         <div class="panel-title"><i class="bi bi-search me-2 text-gold"></i>Find Another Booking</div>
         <div class="row g-3 align-items-end">
             <div class="col-md-8">
@@ -109,7 +161,7 @@
     </div>
 
     {{-- ── BOOKING PROGRESS ── --}}
-    <div class="panel fade-up">
+    <div class="panel fade-up print-hide">
         <div class="panel-title"><i class="bi bi-activity me-2 text-gold"></i>Booking Progress</div>
         <div class="timeline">
 
@@ -212,34 +264,7 @@
         </div>
     </div>
 
-    {{-- ── EMAIL NOTIFICATIONS ── --}}
-    <div class="panel fade-up">
-        <div class="panel-title"><i class="bi bi-envelope me-2 text-gold"></i>Email Notifications</div>
-        <div class="d-flex flex-column gap-2" style="font-size:.85rem">
-            <div class="d-flex align-items-start gap-2">
-                <i class="bi bi-check-circle-fill text-success mt-1 flex-shrink-0"></i>
-                <span>Booking confirmation sent to <strong>{{ $booking['email'] ?? 'your email' }}</strong></span>
-            </div>
-            <div class="d-flex align-items-start gap-2">
-                <i class="bi bi-check-circle-fill text-success mt-1 flex-shrink-0"></i>
-                <span>Payment receipt sent to your email.</span>
-            </div>
-            <div class="d-flex align-items-start gap-2">
-                <i class="bi bi-clock text-muted-sm mt-1 flex-shrink-0"></i>
-                <span class="text-muted-sm">Check-in reminder will be sent 24 hours before your arrival.</span>
-            </div>
-        </div>
-        <div class="mt-3 p-3 rounded-3 d-flex align-items-start gap-2"
-             style="background:#EDF6EE;border:1px solid #B8D9BC;font-size:.82rem">
-            <i class="bi bi-info-circle text-success flex-shrink-0 mt-1"></i>
-            <div>
-                <strong>No account needed.</strong> Use booking code
-                <span class="fw-600" style="color:var(--gold)">SWM-{{ date('Y') }}-000101</span>
-                to access this page anytime.
-            </div>
-        </div>
-    </div>
-
+    {{-- Removed Email Notifications panel as requested --}}
 </div>
 
 @endsection

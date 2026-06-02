@@ -13,8 +13,8 @@
                 <span>Jl. Nuansa Angkasa III No.7 & 9, Ungasan, Kec. Kuta Sel., Kabupaten Badung, Bali 80361, Indonesia</span>
             </p>
             <p class="flex flex-wrap gap-x-12 gap-y-3">
-                <a href="tel:+64272973575" class="inline-flex items-center gap-3 text-white no-underline hover:text-[#ffdc7d]"><i class="fa-solid fa-phone fa-fw" aria-hidden="true"></i> +64 27 297 3575</a>
-                <a href="mailto:reservations@swarnamandapa.com" class="inline-flex items-center gap-3 text-white no-underline hover:text-[#ffdc7d]"><i class="fa-solid fa-envelope fa-fw" aria-hidden="true"></i> reservations@swarnamandapa.com</a>
+                <a href="tel:+64272973575" class="inline-flex items-center gap-3 !text-white !no-underline hover:!text-[#ffdc7d]"><i class="fa-solid fa-phone fa-fw" aria-hidden="true"></i> +64 27 297 3575</a>
+                <a href="mailto:reservations@swarnamandapa.com" class="inline-flex items-center gap-3 !text-white !no-underline hover:!text-[#ffdc7d]"><i class="fa-solid fa-envelope fa-fw" aria-hidden="true"></i> reservations@swarnamandapa.com</a>
             </p>
         </div>
     </div>
@@ -23,9 +23,9 @@
         <div class="grid gap-4">
             <h2 class="font-serif font-bold">Social Media</h2>
             <div class="flex gap-4" aria-label="Social media links">
-                <a href="#" aria-label="Instagram" class="grid size-[42px] place-items-center rounded-full border border-white/60 text-xl text-white no-underline transition hover:border-[#ffdc7d] hover:text-[#ffdc7d]"><i class="fa-brands fa-instagram" aria-hidden="true"></i></a>
-                <a href="#" aria-label="TikTok" class="grid size-[42px] place-items-center rounded-full border border-white/60 text-lg text-white no-underline transition hover:border-[#ffdc7d] hover:text-[#ffdc7d]"><i class="fa-brands fa-tiktok" aria-hidden="true"></i></a>
-                <a href="#" aria-label="Facebook" class="grid size-[42px] place-items-center rounded-full border border-white/60 text-lg text-white no-underline transition hover:border-[#ffdc7d] hover:text-[#ffdc7d]"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a>
+                <a href="#" aria-label="Instagram" class="grid size-[42px] place-items-center rounded-full border border-white/60 text-xl !text-white !no-underline transition hover:border-[#ffdc7d] hover:!text-[#ffdc7d]"><i class="fa-brands fa-instagram" aria-hidden="true"></i></a>
+                <a href="#" aria-label="TikTok" class="grid size-[42px] place-items-center rounded-full border border-white/60 text-lg !text-white !no-underline transition hover:border-[#ffdc7d] hover:!text-[#ffdc7d]"><i class="fa-brands fa-tiktok" aria-hidden="true"></i></a>
+                <a href="#" aria-label="Facebook" class="grid size-[42px] place-items-center rounded-full border border-white/60 text-lg !text-white !no-underline transition hover:border-[#ffdc7d] hover:!text-[#ffdc7d]"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a>
             </div>
         </div>
     </div>

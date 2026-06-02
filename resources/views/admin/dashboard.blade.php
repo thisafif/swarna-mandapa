@@ -231,7 +231,7 @@
                 <div class="metric-icon-box icon-brown"><i class="bi bi-door-closed"></i></div>
                 <div class="metric-title">Total<br>Booking</div>
             </div>
-            <div class="metric-value">1</div>
+            <div class="metric-value">{{ $totalBookings }}</div>
         </div>
         <!-- 2 -->
         <div class="metric-card">
@@ -239,7 +239,7 @@
                 <div class="metric-icon-box" style="background:#FFF3F3; color:#E05A5A;"><i class="bi bi-clock"></i></div>
                 <div class="metric-title">Pending</div>
             </div>
-            <div class="metric-value">1</div>
+            <div class="metric-value">{{ $pendingBookings }}</div>
         </div>
         <!-- 3 -->
         <div class="metric-card">
@@ -247,7 +247,7 @@
                 <div class="metric-icon-box icon-green"><i class="bi bi-check2"></i></div>
                 <div class="metric-title">Confirmed</div>
             </div>
-            <div class="metric-value">1</div>
+            <div class="metric-value">{{ $confirmedBookings }}</div>
         </div>
         <!-- 4 -->
         <div class="metric-card">
@@ -255,7 +255,7 @@
                 <div class="metric-icon-box icon-red"><i class="bi bi-x"></i></div>
                 <div class="metric-title">Declined</div>
             </div>
-            <div class="metric-value">0</div>
+            <div class="metric-value">{{ $declinedBookings }}</div>
         </div>
         <!-- 5 -->
         <div class="metric-card">
@@ -263,7 +263,7 @@
                 <div class="metric-icon-box icon-green" style="color: #4CAF50; background: #E8F5E9;"><i class="bi bi-currency-dollar"></i></div>
                 <div class="metric-title">Revenue</div>
             </div>
-            <div class="metric-value">$22K</div>
+            <div class="metric-value">Rp {{ number_format($revenue, 0, ',', '.') }}</div>
         </div>
     </div>
 
@@ -283,14 +283,18 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @for($i=0; $i<6; $i++)
+                    @forelse($recentTransactions as $tx)
                     <tr>
-                        <td class="tx-code">SWM-2026-000101</td>
-                        <td class="tx-guest">Apipupipupipupu</td>
-                        <td class="tx-date">Feb 26 - 28, 2026</td>
-                        <td class="text-end tx-status-confirmed">CONFIRMED</td>
+                        <td class="tx-code">{{ $tx->booking_code }}</td>
+                        <td class="tx-guest">{{ $tx->first_name }} {{ $tx->last_name }}</td>
+                        <td class="tx-date">{{ date('M d', strtotime($tx->check_in)) }} - {{ date('d, Y', strtotime($tx->check_out)) }}</td>
+                        <td class="text-end tx-status-confirmed" style="{{ $tx->status !== 'CONFIRMED' ? 'color:#888' : '' }}">{{ $tx->status }}</td>
                     </tr>
-                    @endfor
+                    @empty
+                    <tr>
+                        <td colspan="4" class="text-center py-4 text-muted">No transactions yet</td>
+                    </tr>
+                    @endforelse
                 </tbody>
             </table>
             </div>
