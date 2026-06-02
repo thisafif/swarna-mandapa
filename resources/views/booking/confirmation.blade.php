@@ -1,14 +1,11 @@
 {{-- resources/views/booking/confirmation.blade.php --}}
 @extends('layouts.app')
-@section('title', 'Confirm Booking - Swarna Mandapa')
+@section('title', 'Confirm Booking — Swarna Mandapa')
 
 @push('styles')
 <style>
     .fade-up{animation:fadeUp .5s ease both}
     @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-    .detail-row{display:flex;justify-content:space-between;align-items:flex-start;padding:.6rem 0;border-bottom:1px solid var(--border);font-size:.88rem}
-    .detail-row:last-child{border-bottom:none}
-    .detail-label{color:var(--text-muted);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;min-width:120px}
     .step-wrap{display:flex;align-items:center;justify-content:center;margin-bottom:2.5rem}
     .step-item{display:flex;flex-direction:column;align-items:center;gap:.3rem}
     .step-line{width:60px;height:2px;background:var(--border);margin:0 .25rem;margin-bottom:1.2rem}
@@ -31,7 +28,6 @@
 
 <div class="container pb-5">
 
-    {{-- Steps --}}
     <div class="step-wrap">
         <div class="step-item done">
             <div class="step-dot"><i class="bi bi-check-lg" style="font-size:.65rem"></i></div>
@@ -60,7 +56,6 @@
             {{-- Stay Summary --}}
             <div class="panel fade-up">
                 <div class="panel-title"><i class="bi bi-calendar-check me-2 text-gold"></i>Booking Summary</div>
-
                 <div class="d-flex align-items-center gap-3 mb-4 p-3 rounded-3" style="background:var(--cream)">
                     <img src="{{ asset('images/Master Bedroom with ensuite.jpg') }}"
                          class="rounded-3" style="width:80px;height:60px;object-fit:cover" alt="Villa">
@@ -76,7 +71,6 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="row g-3">
                     <div class="col-6">
                         <div class="form-label-sm">Check-in</div>
@@ -115,13 +109,13 @@
                 </div>
             </div>
 
-            {{-- Guest Details --}}
+            {{-- Guest Details — tanpa Country --}}
             <div class="panel fade-up">
                 <div class="panel-title"><i class="bi bi-person-check me-2 text-gold"></i>Guest Details</div>
                 <div class="row g-3">
                     <div class="col-6">
                         <div class="form-label-sm">Full Name</div>
-                        <div class="fw-600">{{ ($booking['first_name'] ?? '') . ' ' . ($booking['last_name'] ?? '') ?: '—' }}</div>
+                        <div class="fw-600">{{ trim(($booking['first_name'] ?? '') . ' ' . ($booking['last_name'] ?? '')) ?: '—' }}</div>
                     </div>
                     <div class="col-6">
                         <div class="form-label-sm">Email</div>
@@ -129,20 +123,39 @@
                     </div>
                     <div class="col-6">
                         <div class="form-label-sm">Phone</div>
-                        <div class="fw-600">+62 {{ $booking['phone'] ?? '—' }}</div>
+                        <div class="fw-600">{{ $booking['phone'] ?? '—' }}</div>
                     </div>
                     <div class="col-6">
-                        <div class="form-label-sm">Country</div>
-                        <div class="fw-600">{{ $booking['country'] ?? '—' }}</div>
-                    </div>
-                    <div class="col-12">
                         <div class="form-label-sm">Booking For</div>
                         <div class="fw-600">{{ ($booking['booking_for'] ?? 'self') === 'self' ? 'I am the main guest' : 'Booking for someone else' }}</div>
                     </div>
                 </div>
             </div>
 
-    {{-- Payment Method (Removed since selection happens on DOKU's page) --}}
+            {{-- Payment Method --}}
+            <div class="panel fade-up">
+                <div class="panel-title"><i class="bi bi-credit-card me-2 text-gold"></i>Payment Method</div>
+                <div class="d-flex align-items-center gap-3">
+                    @php $method = $booking['payment_method'] ?? 'card' @endphp
+                    <div class="rounded-3 p-2 border" style="background:var(--cream);width:52px;height:40px;display:grid;place-items:center">
+                        @if($method === 'card') <i class="bi bi-credit-card-2-front text-gold fs-5"></i>
+                        @elseif($method === 'va') <i class="bi bi-bank text-gold fs-5"></i>
+                        @else <i class="bi bi-wallet2 text-gold fs-5"></i> @endif
+                    </div>
+                    <div>
+                        @if($method === 'card')
+                            <div class="fw-600">Credit / Debit Card</div>
+                            <div class="text-muted-sm">Pilih detail kartu di halaman DOKU</div>
+                        @elseif($method === 'va')
+                            <div class="fw-600">Virtual Account — {{ $booking['va_bank'] ?? 'BCA' }}</div>
+                            <div class="text-muted-sm">Account number will be generated after confirmation</div>
+                        @else
+                            <div class="fw-600">E-Wallet — {{ ucfirst($booking['ewallet'] ?? 'gopay') }}</div>
+                            <div class="text-muted-sm">You'll be redirected to complete payment</div>
+                        @endif
+                    </div>
+                </div>
+            </div>
 
             {{-- Actions --}}
             <div class="d-flex gap-3 fade-up">
@@ -172,21 +185,26 @@
                 </div>
                 <div class="price-summary-body">
                     @php
-                        $nights = 0;
+                        $nights        = 0;
                         if (!empty($booking['check_in']) && !empty($booking['check_out'])) {
                             $nights = (new DateTime($booking['check_in']))->diff(new DateTime($booking['check_out']))->days;
                         }
-                        $base  = 4500000 * $nights;
-                        $tax   = round($base * 0.11);
-                        $fee   = round($base * 0.10);
-                        $total = $base + $tax + $fee;
+                        $pricePerNight = $booking['price_per_night'] ?? 5000000;
+                        $base          = $booking['subtotal']        ?? ($pricePerNight * $nights);
+                        $discount      = $booking['discount_amount'] ?? 0;
+                        $total         = $booking['total_price']     ?? ($base - $discount);
+                        $promoCode     = $booking['promo_code']      ?? null;
                     @endphp
                     <div class="price-row">
-                        <span>Rp 4.500.000 × {{ $nights }} nights</span>
+                        <span>Rp {{ number_format($pricePerNight, 0, ',', '.') }} × {{ $nights }} nights</span>
                         <span>Rp {{ number_format($base, 0, ',', '.') }}</span>
                     </div>
-                    <div class="price-row"><span>Tax (11%)</span><span>Rp {{ number_format($tax, 0, ',', '.') }}</span></div>
-                    <div class="price-row"><span>Service Fee (10%)</span><span>Rp {{ number_format($fee, 0, ',', '.') }}</span></div>
+                    @if($discount > 0)
+                    <div class="price-row" style="color:var(--success)">
+                        <span><i class="bi bi-tag me-1"></i>Promo ({{ $promoCode }})</span>
+                        <span>— Rp {{ number_format($discount, 0, ',', '.') }}</span>
+                    </div>
+                    @endif
                     <div class="price-row total">
                         <span>Total Due</span>
                         <span class="price-total-amount">Rp {{ number_format($total, 0, ',', '.') }}</span>
