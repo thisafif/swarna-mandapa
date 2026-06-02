@@ -31,7 +31,7 @@ class AdminAuthController extends Controller
             session([
                 'admin_authenticated' => true,
                 'admin_email' => $request->input('email'),
-                'admin_name' => 'EGA MUTIARA',
+                'admin_name' => 'MEGA MUTIARA',
             ]);
 
             return redirect()->route('admin.dashboard')->with('success', 'Login berhasil!');

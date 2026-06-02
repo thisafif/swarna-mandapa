@@ -169,7 +169,7 @@
                 Ready to Experience<br class="hidden sm:block"> Swarna Mandapa in Person?
             </h2>
             <p class="font-serif text-lg font-bold text-[#71562a] sm:text-2xl">Let our concierge help you plan the perfect stay.</p>
-            <x-gold-button href="{{ route('contact-us') }}" class="w-full sm:w-auto sm:px-12">Check Availability →</x-gold-button>
+            <x-gold-button href="{{ route('booking.form') }}" class="w-full sm:w-auto sm:px-12">Check Availability →</x-gold-button>
         </section>
 
         <x-site-footer :links="$footerLinks" />
