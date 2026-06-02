@@ -3,8 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard — Swarna Mandapa</title>
+    <title>Admin Dashboard - Swarna Mandapa</title>
     
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ asset('images/logo-swarna-mandapa.png') }}">
+
     {{-- Bootstrap & Bootstrap Icons --}}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -260,7 +263,10 @@
             <div class="nav-section-title mt-5">CONFIGURATION</div>
             <a href="{{ route('admin.villa_settings') }}" class="nav-link {{ request()->routeIs('admin.villa_settings') ? 'active' : '' }}"><i class="bi bi-gear"></i> Villa Settings</a>
 
-            <a href="{{ route('admin.login') }}" class="nav-link btn-logout"><i class="bi bi-box-arrow-right"></i> LOG OUT</a>
+            <form action="{{ route('admin.logout') }}" method="POST" style="margin-top: 3rem;">
+                @csrf
+                <button type="submit" class="nav-link btn-logout w-100 text-start border-0 bg-transparent" onclick="return confirm('Yakin ingin logout?')"><i class="bi bi-box-arrow-right"></i> LOG OUT</button>
+            </form>
         </nav>
     </aside>
 
@@ -272,7 +278,7 @@
                 <div class="header-divider"></div>
                 <div class="user-profile">
                     <div class="profile-info">
-                        <span class="profile-name">{{ session('admin_name', 'EGA MUTIARA') }}</span>
+                        <span class="profile-name">{{ session('admin_name', 'MEGA MUTIARA') }}</span>
                         <span class="profile-role">OWNER</span>
                     </div>
                     <div class="profile-avatar"><i class="bi bi-person"></i></div>

@@ -41,7 +41,7 @@
                             </h2>
                         </div>
 
-                        <form action="mailto:reservations@swarnamandapa.com" method="post" enctype="text/plain" class="grid gap-4" data-mailto-form>
+                        <form id="contact-form" class="grid gap-4" novalidate>
                             <div class="grid gap-3 sm:grid-cols-2">
                                 <label class="grid gap-1.5">
                                     <span class="font-serif text-[10px] font-bold uppercase tracking-[0.1em] text-[#3a2a14]">First Name <span class="text-[#b8892e]">*</span></span>
@@ -96,4 +96,34 @@
 
         <x-site-footer :links="$footerLinks" />
     </main>
+
+    <script>
+        document.getElementById('contact-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const firstName = this.first_name.value.trim();
+            const lastName  = this.last_name.value.trim();
+            const email     = this.email.value.trim();
+            const phone     = this.phone.value.trim() || '-';
+            const message   = this.message.value.trim();
+
+            // Validasi manual
+            if (!firstName || !lastName || !email || !message) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+
+            const subject = encodeURIComponent(`Message from ${firstName} ${lastName}`);
+            const body    = encodeURIComponent(
+`Name    : ${firstName} ${lastName}
+Email   : ${email}
+Phone   : ${phone}
+
+Message :
+${message}`
+            );
+
+            window.location.href = `mailto:reservations@swarnamandapa.com?subject=${subject}&body=${body}`;
+        });
+    </script>
 </x-layout>

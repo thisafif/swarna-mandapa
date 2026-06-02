@@ -132,7 +132,7 @@
                 Ready to Create Your<br class="hidden sm:block"> Own Swarna Mandapa Story?
             </h2>
             <p class="font-serif text-lg font-bold text-[#71562a] sm:text-2xl">Reserve your preferred dates with our concierge team.</p>
-            <x-gold-button href="{{ route('contact-us') }}" class="w-full sm:w-auto sm:px-12">Check Availability →</x-gold-button>
+            <x-gold-button href="{{ route('booking.form') }}" class="w-full sm:w-auto sm:px-12">Check Availability →</x-gold-button>
         </section>
 
         <x-site-footer :links="$footerLinks" />

@@ -128,6 +128,55 @@
         color: #55442A; /* High contrast text for gold background */
     }
 
+    /* Custom Pop-up Tooltip */
+    .custom-tooltip {
+        position: absolute;
+        bottom: calc(100% + 5px);
+        left: 50%;
+        transform: translateX(-50%) translateY(10px);
+        background: #FFFFFF;
+        border: 1px solid #EAEAEA;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+        padding: 1rem;
+        border-radius: 10px;
+        min-width: 220px;
+        z-index: 100;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        pointer-events: none;
+        text-align: left;
+    }
+
+    .custom-tooltip::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border-width: 8px;
+        border-style: solid;
+        border-color: #FFFFFF transparent transparent transparent;
+    }
+
+    .custom-tooltip::before {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border-width: 9px;
+        border-style: solid;
+        border-color: #EAEAEA transparent transparent transparent;
+        z-index: -1;
+    }
+
+    .day-box.occupied:hover .custom-tooltip {
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(-50%) translateY(0);
+    }
+
     @media (max-width: 991px) {
         .calendar-grid {
             gap: 0.5rem;
@@ -205,18 +254,14 @@
         document.addEventListener("DOMContentLoaded", function() {
             const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
             
-            // Dummy logic to populate occupied days. You can easily feed this array from Laravel DB Backend!
-            const occupiedDates = [
-                "2026-02-26", "2026-02-27", "2026-02-28", // Original mockup dates
-                "2026-03-14", "2026-03-15", "2026-03-16",
-                "2026-01-01", "2026-01-02", "2025-12-31" 
-            ];
+            // Fetch real data from controller
+            const occupiedData = {!! $occupiedDatesJson ?? '{}' !!};
 
             const gridContainer = document.getElementById('calendarGrid');
             const monthDisplay = document.getElementById('monthYearDisplay');
 
-            // Default mockup date start point (Feb 2026)
-            let currentDate = new Date(2026, 1, 1); 
+            // Set current date based on today
+            let currentDate = new Date(); 
 
             // Save the weekdays HTML so we don't accidentally wipe it out
             const weekdaysHTML = `
@@ -254,7 +299,7 @@
                     const dStr = String(day).padStart(2, '0');
                     const dateStr = `${year}-${mStr}-${dStr}`;
 
-                    const isOccupied = occupiedDates.includes(dateStr);
+                    const isOccupied = occupiedData.hasOwnProperty(dateStr);
                     const isRealToday = (realToday.getFullYear() === year && realToday.getMonth() === month && realToday.getDate() === day);
 
                     let classes = "day-box";
@@ -263,9 +308,33 @@
                     // Cute little gold dot indicator for "Today"
                     let indicator = isRealToday ? '<div style="position:absolute; bottom:0.5rem; left:0.5rem; width:8px; height:8px; background-color:var(--brand-gold-dark); border-radius:50%; box-shadow: 0 0 5px rgba(0,0,0,0.1);" title="Today"></div>' : "";
 
+                    let guestInfo = "";
+                    let hoverStyle = "";
+                    
+                    if (isOccupied) {
+                        const data = occupiedData[dateStr];
+                        hoverStyle = `style="cursor:pointer;"`;
+                        
+                        // Badge styling based on status
+                        let badgeBg = data.status === 'CONFIRMED' ? '#Edf7ed' : '#FFF3F3';
+                        let badgeColor = data.status === 'CONFIRMED' ? '#1E4620' : '#E05A5A';
+
+                        guestInfo = `
+                            <div class="custom-tooltip">
+                                <div style="font-size:0.65rem; font-weight:700; color:#888; text-transform:uppercase; margin-bottom:0.4rem; letter-spacing:0.05em;">Booking Detail</div>
+                                <div style="font-weight:700; color:#222; font-size:0.95rem; line-height:1.2; word-wrap:break-word;">${data.guest}</div>
+                                <div style="margin-top:0.6rem;">
+                                    <div style="font-size:0.75rem; color:#666; font-family:monospace; margin-bottom:0.4rem;"><i class="bi bi-tag-fill text-gold me-1"></i> ${data.code}</div>
+                                    <span style="display:inline-block; padding:0.2rem 0.6rem; background:${badgeBg}; color:${badgeColor}; border-radius:50px; font-size:0.65rem; font-weight:700; letter-spacing:0.05em;">${data.status}</span>
+                                </div>
+                            </div>
+                        `;
+                    }
+
                     htmlContent += `
-                        <div class="${classes}">
+                        <div class="${classes}" ${hoverStyle}>
                             <span class="day-number">${day}</span>
+                            ${guestInfo}
                             ${indicator}
                         </div>
                     `;
