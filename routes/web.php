@@ -4,6 +4,7 @@ use App\Http\Controllers\BookingController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ReviewController;
 use App\Models\Admin;
+use Illuminate\Http\Request;
 
 Route::get('/', function () {
     return view('index');
@@ -46,6 +47,13 @@ Route::post('/admin/login', function (\Illuminate\Http\Request $request) {
 
     return redirect()->back()->withErrors(['email' => 'Email atau Password salah!'])->withInput();
 })->name('admin.login.submit');
+
+Route::post('/admin/logout', function (Request $request) {
+    $request->session()->forget(['admin_id', 'admin_name', 'admin_email']);
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+    return redirect()->route('admin.login');
+})->name('admin.logout');
 
 Route::get('/admin/dashboard', function () {
     return view('admin.dashboard');
