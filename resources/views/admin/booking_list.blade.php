@@ -190,8 +190,10 @@
         opacity: 0;
         pointer-events: none;
         transition: opacity 0.3s;
+        display: none;
     }
     .detail-backdrop.show {
+        display: block;
         opacity: 1;
         pointer-events: auto;
     }
@@ -207,9 +209,11 @@
         transition: right 0.3s ease;
         display: flex;
         flex-direction: column;
+        visibility: hidden;
     }
     .detail-panel.show {
         right: 0;
+        visibility: visible;
     }
     .dp-header {
         padding: 1.5rem 2rem;
@@ -272,6 +276,70 @@
         letter-spacing: 0.05em;
     }
 
+    /* Edit Modal */
+    #editBackdrop {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.4);
+        z-index: 1045;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+        display: none;
+    }
+    #editBackdrop.show {
+        display: block;
+        opacity: 1;
+        pointer-events: auto;
+    }
+    #editModal {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.9);
+        background: #FFF;
+        border-radius: 12px;
+        z-index: 1055;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        max-height: 90vh;
+        overflow-y: auto;
+        opacity: 0;
+        pointer-events: none;
+        transition: all 0.3s ease;
+        display: none;
+    }
+    #editModal.show {
+        display: block;
+        opacity: 1;
+        pointer-events: auto;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    /* Form Controls */
+    .form-control {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #DDD;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        transition: border-color 0.2s;
+    }
+    .form-control:focus {
+        outline: none;
+        border-color: var(--brand-gold);
+        box-shadow: 0 0 0 3px rgba(201, 169, 110, 0.1);
+    }
+    .form-label {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        display: block;
+        font-size: 0.9rem;
+        color: #222;
+    }
+    .mb-3 {
+        margin-bottom: 1.5rem;
+    }
+
     @media (max-width: 768px) {
         .page-title {
             font-size: 1.8rem;
@@ -299,13 +367,6 @@
 @section('content')
     <h1 class="page-title">Booking <em>List</em></h1>
     <div class="page-subtitle">Recent Transaction</div>
-
-    @if(session('success'))
-        <div class="alert alert-success" style="background:#edf7ed; color:#1e4620; padding:1rem; border-radius:8px; margin-bottom:1.5rem; text-align:center; font-weight:600;">{{ session('success') }}</div>
-    @endif
-    @if(session('error'))
-        <div class="alert alert-danger" style="background:#fee2e2; color:#ef4444; padding:1rem; border-radius:8px; margin-bottom:1.5rem; text-align:center; font-weight:600;">{{ session('error') }}</div>
-    @endif
 
     <div class="table-card">
         <!-- Toolbar -->
@@ -340,21 +401,21 @@
                 </thead>
                 <tbody>
                     @forelse($bookings as $index => $booking)
-                    <tr>
-                        <td class="col-no">{{ str_pad($index + $bookings->firstItem(), 2, '0', STR_PAD_LEFT) }}</td>
-                        <td class="col-code">{{ $booking->booking_code }}</td>
-                        <td class="col-guest">{{ $booking->first_name }} {{ $booking->last_name }}</td>
-                        <td class="col-date">{{ date('M d', strtotime($booking->check_in)) }} - {{ date('M d, Y', strtotime($booking->check_out)) }}</td>
-                        <td class="col-status">{{ $booking->status }}</td>
-                        <td class="col-created">{{ $booking->created_at->format('M d, Y H:i') }}</td>
-                        <td class="col-action">
-                            <a href="#" class="action-link" onclick="openDetail('{{ $booking->booking_code }}', '{{ $booking->status }}', '{{ addslashes($booking->first_name . ' ' . $booking->last_name) }}', '{{ addslashes($booking->phone) }}', '{{ addslashes($booking->email) }}', '{{ date('d M Y', strtotime($booking->check_in)) }}', '{{ date('d M Y', strtotime($booking->check_out)) }}', '{{ number_format($booking->total_price, 0, ',', '.') }}'); return false;">DETAIL</a>
-                        </td>
-                    </tr>
+                        <tr data-booking='@json($booking)' onclick="openDetail(this); return false;">
+                            <td class="col-no">{{ str_pad($index + 1, 2, '0', STR_PAD_LEFT) }}</td>
+                            <td class="col-code">{{ $booking->booking_code }}</td>
+                            <td class="col-guest">{{ $booking->first_name }} {{ $booking->last_name }}</td>
+                            <td class="col-date">{{ $booking->check_in->format('M d') }} - {{ $booking->check_out->format('M d, Y') }}</td>
+                            <td class="col-status">{{ $booking->status }}</td>
+                            <td class="col-created">{{ $booking->created_at->format('M d, Y H:i') }}</td>
+                            <td class="col-action">
+                                <a href="#" class="action-link">DETAIL</a>
+                            </td>
+                        </tr>
                     @empty
-                    <tr>
-                        <td colspan="7" class="text-center py-4">No bookings found.</td>
-                    </tr>
+                        <tr>
+                            <td colspan="7" class="text-center" style="padding:2rem; color:#666;">No bookings found.</td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>
@@ -362,9 +423,13 @@
 
         <!-- Footer Pagination -->
         <div class="table-footer">
-            <div class="entries-info">Showing {{ $bookings->firstItem() ?? 0 }}-{{ $bookings->lastItem() ?? 0 }} of {{ $bookings->total() }} entries</div>
+            <div class="entries-info">Showing 1-{{ $bookings->count() }} of {{ $bookings->count() }} entries</div>
             <div class="pagination">
-                {{ $bookings->links('pagination::bootstrap-4') }}
+                <a href="#" class="page-item"><i class="bi bi-chevron-left mt-1" style="font-size:0.7rem"></i></a>
+                <a href="#" class="page-item active">1</a>
+                <a href="#" class="page-item">2</a>
+                <a href="#" class="page-item">3</a>
+                <a href="#" class="page-item"><i class="bi bi-chevron-right mt-1" style="font-size:0.7rem"></i></a>
             </div>
         </div>
     </div>
@@ -380,9 +445,9 @@
             <div class="dp-section">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div class="dp-label mb-0">Booking Ref</div>
-                    <div class="dp-status" id="detailStatus">CONFIRMED</div>
+                    <div class="dp-status" id="dp-status">CONFIRMED</div>
                 </div>
-                <div class="dp-value" id="detailCode" style="font-size:1.2rem; color:var(--brand-gold-dark); font-weight:700;">-</div>
+                <div class="dp-value" id="dp-booking-code" style="font-size:1.2rem; color:var(--brand-gold-dark); font-weight:700;">SWM-2026-000101</div>
             </div>
 
             <hr style="border-color:#EBEBEB; margin: 1.5rem 0;">
@@ -390,10 +455,10 @@
             <div class="dp-section">
                 <div class="dp-label">Guest Information</div>
                 <div class="dp-value">
-                    <strong style="font-size: 1.05rem;" id="detailName">-</strong><br>
+                    <strong style="font-size: 1.05rem;" id="dp-guest-name">Guest Name</strong><br>
                     <span style="color:#666; font-size:0.85rem; display:inline-block; margin-top:0.4rem;">
-                        <i class="bi bi-whatsapp" style="margin-right:0.3rem"></i> <span id="detailPhone">-</span><br>
-                        <i class="bi bi-envelope" style="margin-right:0.3rem"></i> <span id="detailEmail">-</span>
+                        <i class="bi bi-whatsapp" style="margin-right:0.3rem"></i> <span id="dp-phone">+62 812-3456-7890</span><br>
+                        <i class="bi bi-envelope" style="margin-right:0.3rem"></i> <span id="dp-email">apip@example.com</span>
                     </span>
                 </div>
             </div>
@@ -403,17 +468,17 @@
                 <div class="dp-value-group mb-3">
                     <div>
                         <div style="font-size:0.75rem; color:#888; font-weight: 600; margin-bottom: 0.2rem;">Check-in</div>
-                        <div style="font-weight:700; color:#222;" id="detailCin">-</div>
+                        <div style="font-weight:700; color:#222;" id="dp-check-in">26 Feb 2026</div>
                     </div>
                     <div>
                         <div style="font-size:0.75rem; color:#888; font-weight: 600; margin-bottom: 0.2rem;">Check-out</div>
-                        <div style="font-weight:700; color:#222;" id="detailCout">-</div>
+                        <div style="font-weight:700; color:#222;" id="dp-check-out">28 Feb 2026</div>
                     </div>
                 </div>
                 <div class="p-3" style="background: #FDFBF7; border: 1px solid #EBE4D5; border-radius: 8px;">
-                    <div style="font-size:0.75rem; color:#7A6953; font-weight: 600; margin-bottom: 0.2rem;">Accommodation</div>
-                    <div style="font-weight:600; color:#222; font-size: 0.9rem;">Entire Villa (4 Bedrooms)</div>
-                    <div style="font-size:0.8rem; color:#666; margin-top: 0.4rem;"><i class="bi bi-people-fill text-gold"></i> Up to 8 Guests</div>
+                    <div style="font-size:0.75rem; color:#7A6953; font-weight: 600; margin-bottom: 0.2rem;">Guests</div>
+                    <div style="font-weight:600; color:#222; font-size: 0.9rem;"><span id="dp-guests">1</span> Guest(s)</div>
+                    <div style="font-size:0.8rem; color:#666; margin-top: 0.4rem;"><i class="bi bi-info-circle"></i> Entire Villa (4 Bedrooms), up to 8 guests max</div>
                 </div>
             </div>
 
@@ -422,65 +487,267 @@
             <div class="dp-section">
                 <div class="dp-label">Payment Breakdown</div>
                 <div class="d-flex justify-content-between mb-2">
-                    <span style="font-size:0.9rem; color:#555;">Payment Method</span>
-                    <span style="font-size:0.9rem; font-weight:600;">DOKU Gateway</span>
+                    <span style="font-size:0.9rem; color:#555;">Price/Night</span>
+                    <span style="font-size:0.9rem; font-weight:600;" id="dp-price-per-night">$0</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span style="font-size:0.9rem; color:#555;">Nights</span>
+                    <span style="font-size:0.9rem; font-weight:600;" id="dp-nights">0</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span style="font-size:0.9rem; color:#555;">Discount</span>
+                    <span style="font-size:0.9rem; font-weight:600;" id="dp-discount">$0</span>
                 </div>
                 <div class="d-flex justify-content-between mt-3 pt-3" style="border-top: 1px dashed #DDD;">
                     <span style="font-size:0.9rem; color:#222; font-weight: 600;">Total Amount</span>
-                    <span style="font-size:1.1rem; font-weight:700; color:var(--brand-gold-dark);" id="detailTotal">-</span>
+                    <span style="font-size:1.1rem; font-weight:700; color:var(--brand-gold-dark);" id="dp-total-price">$0</span>
                 </div>
             </div>
 
-            <!-- Cancel Action Section -->
-            <div class="dp-section" id="cancelActionSection" style="display:none; margin-top:2rem;">
-                <form id="cancelBookingForm" action="" method="POST" onsubmit="return confirm('Are you sure you want to cancel this booking? This will free up the dates.');">
-                    @csrf
-                    <button type="submit" style="width:100%; background-color:#ef4444; border:none; border-radius:8px; padding:0.85rem; color:#fff; font-weight:600; cursor:pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#dc2626'" onmouseout="this.style.backgroundColor='#ef4444'">Cancel Booking</button>
-                </form>
+            <hr style="border-color:#EBEBEB; margin: 1.5rem 0;">
+
+            <!-- Action Buttons -->
+            <div class="dp-section">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <button class="btn" style="background-color: #E8E8E8; color: #333; font-weight: 600; border-radius: 8px; padding: 0.75rem 1rem; cursor: pointer; border: none; transition: background-color 0.2s;" onclick="openEditModal()" onmouseover="this.style.backgroundColor='#D8D8D8'" onmouseout="this.style.backgroundColor='#E8E8E8'">
+                        <i class="bi bi-pencil-square"></i> Edit
+                    </button>
+                    <button class="btn" style="background-color: #FFE5E5; color: #E05A5A; font-weight: 600; border-radius: 8px; padding: 0.75rem 1rem; cursor: pointer; border: none; transition: background-color 0.2s;" onclick="deleteBooking()" onmouseover="this.style.backgroundColor='#FFD0D0'" onmouseout="this.style.backgroundColor='#FFE5E5'">
+                        <i class="bi bi-trash3"></i> Delete
+                    </button>
+                </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="detail-backdrop" id="editBackdrop" onclick="closeEditModal()"></div>
+    <div class="detail-panel" id="editModal" style="width: 500px; max-width: 90vw;">
+        <div class="dp-header">
+            <h3 class="dp-title">Edit Booking</h3>
+            <button class="dp-close" onclick="closeEditModal()"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="dp-body">
+            <form id="editBookingForm">
+                @csrf
+                @method('PUT')
+                <input type="hidden" id="editBookingId" name="id">
+                
+                <div class="mb-3">
+                    <label class="form-label" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">First Name</label>
+                    <input type="text" id="editFirstName" name="first_name" class="form-control" style="padding: 0.75rem; border-radius: 8px; border: 1px solid #DDD;" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Last Name</label>
+                    <input type="text" id="editLastName" name="last_name" class="form-control" style="padding: 0.75rem; border-radius: 8px; border: 1px solid #DDD;" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Email</label>
+                    <input type="email" id="editEmail" name="email" class="form-control" style="padding: 0.75rem; border-radius: 8px; border: 1px solid #DDD;" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Phone</label>
+                    <input type="tel" id="editPhone" name="phone" class="form-control" style="padding: 0.75rem; border-radius: 8px; border: 1px solid #DDD;" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Check-in Date</label>
+                    <input type="date" id="editCheckIn" name="check_in" class="form-control" style="padding: 0.75rem; border-radius: 8px; border: 1px solid #DDD;" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Check-out Date</label>
+                    <input type="date" id="editCheckOut" name="check_out" class="form-control" style="padding: 0.75rem; border-radius: 8px; border: 1px solid #DDD;" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Guests</label>
+                    <input type="number" id="editGuests" name="guests" min="1" max="10" class="form-control" style="padding: 0.75rem; border-radius: 8px; border: 1px solid #DDD;" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Price Per Night</label>
+                    <input type="number" id="editPricePerNight" name="price_per_night" step="0.01" class="form-control" style="padding: 0.75rem; border-radius: 8px; border: 1px solid #DDD;" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Discount Amount</label>
+                    <input type="number" id="editDiscountAmount" name="discount_amount" step="0.01" class="form-control" style="padding: 0.75rem; border-radius: 8px; border: 1px solid #DDD;" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Status</label>
+                    <select id="editStatus" name="status" class="form-control" style="padding: 0.75rem; border-radius: 8px; border: 1px solid #DDD;" required>
+                        <option value="PENDING">PENDING</option>
+                        <option value="CONFIRMED">CONFIRMED</option>
+                        <option value="CANCELLED">CANCELLED</option>
+                    </select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 2rem;">
+                    <button type="button" class="btn" style="background-color: #E8E8E8; color: #333; font-weight: 600; border-radius: 8px; padding: 0.75rem; border: none; cursor: pointer;" onclick="closeEditModal()">Cancel</button>
+                    <button type="submit" class="btn" style="background-color: var(--brand-gold-dark); color: #fff; font-weight: 600; border-radius: 8px; padding: 0.75rem; border: none; cursor: pointer;">Save Changes</button>
+                </div>
+            </form>
         </div>
     </div>
 
     <!-- Script to toggle offcanvas -->
     <script>
-        function openDetail(code, status, name, phone, email, cin, cout, total) {
-            document.getElementById('detailCode').textContent = code;
-            document.getElementById('detailStatus').textContent = status;
-            
-            // Adjust status badge color
-            const statusBadge = document.getElementById('detailStatus');
-            if(status === 'PENDING') {
-                statusBadge.style.background = '#FFF3F3';
-                statusBadge.style.color = '#E05A5A';
-            } else if (status === 'CONFIRMED') {
-                statusBadge.style.background = '#Edf7ed';
-                statusBadge.style.color = '#1E4620';
-            } else {
-                statusBadge.style.background = '#F0F0F0';
-                statusBadge.style.color = '#555';
+        let currentBookingId = null;
+
+        function openDetail(row) {
+            try {
+                const bookingData = JSON.parse(row.getAttribute('data-booking'));
+                currentBookingId = bookingData.id;
+                
+                // Format dates
+                const checkIn = new Date(bookingData.check_in);
+                const checkOut = new Date(bookingData.check_out);
+                const options = { year: 'numeric', month: 'short', day: 'numeric' };
+                
+                // Calculate nights
+                const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+                
+                // Update detail panel
+                document.getElementById('dp-booking-code').textContent = bookingData.booking_code;
+                document.getElementById('dp-status').textContent = bookingData.status;
+                document.getElementById('dp-guest-name').textContent = bookingData.first_name + ' ' + bookingData.last_name;
+                document.getElementById('dp-phone').textContent = bookingData.phone;
+                document.getElementById('dp-email').textContent = bookingData.email;
+                document.getElementById('dp-check-in').textContent = checkIn.toLocaleDateString('en-US', options);
+                document.getElementById('dp-check-out').textContent = checkOut.toLocaleDateString('en-US', options);
+                document.getElementById('dp-guests').textContent = bookingData.guests;
+                document.getElementById('dp-price-per-night').textContent = '$' + parseFloat(bookingData.price_per_night).toLocaleString('en-US', {minimumFractionDigits: 2});
+                document.getElementById('dp-nights').textContent = nights;
+                document.getElementById('dp-discount').textContent = '$' + parseFloat(bookingData.discount_amount).toLocaleString('en-US', {minimumFractionDigits: 2});
+                document.getElementById('dp-total-price').textContent = '$' + parseFloat(bookingData.total_price).toLocaleString('en-US', {minimumFractionDigits: 2});
+                
+                document.getElementById('detailBackdrop').classList.add('show');
+                document.getElementById('detailPanel').classList.add('show');
+            } catch (e) {
+                console.error('Error loading booking details:', e);
             }
-
-            document.getElementById('detailName').textContent = name;
-            document.getElementById('detailPhone').textContent = phone || '-';
-            document.getElementById('detailEmail').textContent = email || '-';
-            document.getElementById('detailCin').textContent = cin;
-            document.getElementById('detailCout').textContent = cout;
-            document.getElementById('detailTotal').textContent = 'Rp ' + total;
-
-            // Handle Cancel Booking Form Action
-            if(status === 'PENDING' || status === 'CONFIRMED') {
-                document.getElementById('cancelActionSection').style.display = 'block';
-                document.getElementById('cancelBookingForm').action = "/admin/bookings/" + code + "/cancel";
-            } else {
-                document.getElementById('cancelActionSection').style.display = 'none';
-            }
-
-            document.getElementById('detailBackdrop').classList.add('show');
-            document.getElementById('detailPanel').classList.add('show');
         }
+
         function closeDetail() {
             document.getElementById('detailBackdrop').classList.remove('show');
             document.getElementById('detailPanel').classList.remove('show');
         }
+
+        function openEditModal() {
+            if (!currentBookingId) return;
+            
+            // Find the booking data from the table row
+            let bookingData = null;
+            const rows = document.querySelectorAll('tr[data-booking]');
+            for (let row of rows) {
+                const data = JSON.parse(row.getAttribute('data-booking'));
+                if (data.id === currentBookingId) {
+                    bookingData = data;
+                    break;
+                }
+            }
+            
+            if (!bookingData) return;
+            
+            // Helper function to format date for input type="date"
+            const formatDateForInput = (dateStr) => {
+                const date = new Date(dateStr);
+                return date.toISOString().split('T')[0];
+            };
+            
+            // Populate form fields
+            document.getElementById('editBookingId').value = bookingData.id;
+            document.getElementById('editFirstName').value = bookingData.first_name;
+            document.getElementById('editLastName').value = bookingData.last_name;
+            document.getElementById('editEmail').value = bookingData.email;
+            document.getElementById('editPhone').value = bookingData.phone;
+            document.getElementById('editCheckIn').value = formatDateForInput(bookingData.check_in);
+            document.getElementById('editCheckOut').value = formatDateForInput(bookingData.check_out);
+            document.getElementById('editGuests').value = bookingData.guests;
+            document.getElementById('editPricePerNight').value = bookingData.price_per_night;
+            document.getElementById('editDiscountAmount').value = bookingData.discount_amount;
+            document.getElementById('editStatus').value = bookingData.status;
+            
+            // Show edit modal and hide detail panel
+            document.getElementById('editBackdrop').classList.add('show');
+            document.getElementById('editModal').classList.add('show');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editBackdrop').classList.remove('show');
+            document.getElementById('editModal').classList.remove('show');
+        }
+
+        function deleteBooking() {
+            if (!currentBookingId) return;
+            
+            if (confirm('Are you sure you want to delete this booking? This action cannot be undone.')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `/admin/booking-list/${currentBookingId}`;
+                
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                const methodInput = document.createElement('input');
+                methodInput.type = 'hidden';
+                methodInput.name = '_method';
+                methodInput.value = 'DELETE';
+                
+                const tokenInput = document.createElement('input');
+                tokenInput.type = 'hidden';
+                tokenInput.name = '_token';
+                tokenInput.value = csrfToken;
+                
+                form.appendChild(methodInput);
+                form.appendChild(tokenInput);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        // Handle Edit Form Submission
+        document.getElementById('editBookingForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const bookingId = formData.get('id');
+            
+            try {
+                const response = await fetch(`/admin/booking-list/${bookingId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                        first_name: formData.get('first_name'),
+                        last_name: formData.get('last_name'),
+                        email: formData.get('email'),
+                        phone: formData.get('phone'),
+                        check_in: formData.get('check_in'),
+                        check_out: formData.get('check_out'),
+                        guests: formData.get('guests'),
+                        price_per_night: formData.get('price_per_night'),
+                        discount_amount: formData.get('discount_amount'),
+                        status: formData.get('status')
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Booking updated successfully!');
+                    location.reload();
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.message || 'Failed to update booking'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while updating the booking');
+            }
+        });
     </script>
 @endsection

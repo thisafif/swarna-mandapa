@@ -255,7 +255,7 @@
                 <div class="metric-icon-box icon-red"><i class="bi bi-x"></i></div>
                 <div class="metric-title">Declined</div>
             </div>
-            <div class="metric-value">{{ $declinedBookings }}</div>
+            <div class="metric-value">{{ $cancelledBookings }}</div>
         </div>
         <!-- 5 -->
         <div class="metric-card">
@@ -283,18 +283,20 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($recentTransactions as $tx)
-                    <tr>
-                        <td class="tx-code">{{ $tx->booking_code }}</td>
-                        <td class="tx-guest">{{ $tx->first_name }} {{ $tx->last_name }}</td>
-                        <td class="tx-date">{{ date('M d', strtotime($tx->check_in)) }} - {{ date('d, Y', strtotime($tx->check_out)) }}</td>
-                        <td class="text-end tx-status-confirmed" style="{{ $tx->status !== 'CONFIRMED' ? 'color:#888' : '' }}">{{ $tx->status }}</td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="4" class="text-center py-4 text-muted">No transactions yet</td>
-                    </tr>
-                    @endforelse
+                    @if($recentBookings->isEmpty())
+                        <tr>
+                            <td colspan="4" class="text-center" style="padding:2rem; color:#666;">No bookings available yet.</td>
+                        </tr>
+                    @else
+                        @foreach($recentBookings as $booking)
+                            <tr>
+                                <td class="tx-code">{{ $booking->booking_code }}</td>
+                                <td class="tx-guest">{{ $booking->first_name }} {{ $booking->last_name }}</td>
+                                <td class="tx-date">{{ $booking->check_in->format('M d') }} - {{ $booking->check_out->format('M d, Y') }}</td>
+                                <td class="text-end tx-status-confirmed">{{ $booking->status }}</td>
+                            </tr>
+                        @endforeach
+                    @endif
                 </tbody>
             </table>
             </div>
@@ -305,42 +307,13 @@
             <div class="widget-title">Availability</div>
             
             <div class="calendar-mock">
-                <div class="calendar-month">February 2026</div>
+                <div class="calendar-month" id="dashboardCalendarTitle">Loading...</div>
                 
                 <div class="calendar-grid calendar-header">
                     <div>SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div>
                 </div>
                 
-                <div class="calendar-grid">
-                    <div class="calendar-day">1</div>
-                    <div class="calendar-day">2</div>
-                    <div class="calendar-day">3</div>
-                    <div class="calendar-day">4</div>
-                    <div class="calendar-day">5</div>
-                    <div class="calendar-day">6</div>
-                    <div class="calendar-day">7</div>
-                    <div class="calendar-day">8</div>
-                    <div class="calendar-day">9</div>
-                    <div class="calendar-day">10</div>
-                    <div class="calendar-day">11</div>
-                    <div class="calendar-day">12</div>
-                    <div class="calendar-day">13</div>
-                    <div class="calendar-day">14</div>
-                    <div class="calendar-day">15</div>
-                    <div class="calendar-day">16</div>
-                    <div class="calendar-day">17</div>
-                    <div class="calendar-day">18</div>
-                    <div class="calendar-day">19</div>
-                    <div class="calendar-day">20</div>
-                    <div class="calendar-day">21</div>
-                    <div class="calendar-day">22</div>
-                    <div class="calendar-day">23</div>
-                    <div class="calendar-day">24</div>
-                    <div class="calendar-day">25</div>
-                    <div class="calendar-day">26</div>
-                    <div class="calendar-day">27</div>
-                    <div class="calendar-day">28</div>
-                </div>
+                <div class="calendar-grid" id="dashboardCalendarGrid"></div>
 
                 <div class="calendar-legend">
                     <div class="legend-item"><div class="dot-occupied"></div> OCCUPIED</div>
@@ -349,4 +322,48 @@
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async function () {
+            const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+            const current = new Date();
+            const year = current.getFullYear();
+            const month = current.getMonth();
+            const title = document.getElementById('dashboardCalendarTitle');
+            const grid = document.getElementById('dashboardCalendarGrid');
+
+            title.textContent = `${monthNames[month]} ${year}`;
+
+            const response = await fetch('/api/unavailable-dates');
+            const booked = await response.json();
+            const firstDayIndex = new Date(year, month, 1).getDay();
+            const totalDays = new Date(year, month + 1, 0).getDate();
+            let html = '';
+
+            for (let i = 0; i < firstDayIndex; i++) {
+                html += '<div class="calendar-day" style="visibility:hidden; background:transparent; border:none;"></div>';
+            }
+
+            for (let day = 1; day <= totalDays; day++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                const isBooked = booked[dateStr] !== undefined;
+                const isToday = current.getDate() === day;
+                const classes = ['calendar-day'];
+                let style = '';
+                let content = `${day}`;
+
+                if (isBooked) {
+                    style = 'background: linear-gradient(135deg, #DFCAA5 0%, #D4BC97 100%); border-color: #DFCAA5; color: #55442A;';
+                }
+
+                if (isToday) {
+                    content = `<div style="position:relative; display:inline-block; width:100%;">${day}<span style=\"position:absolute; bottom:-5px; left:50%; transform:translateX(-50%); width:6px; height:6px; background:#EAEAEA; border-radius:50%;\"></span></div>`;
+                }
+
+                html += `<div class="${classes.join(' ')}" style="${style}">${content}</div>`;
+            }
+
+            grid.innerHTML = html;
+        });
+    </script>
 @endsection

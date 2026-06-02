@@ -20,74 +20,58 @@ class BookingController extends Controller
 
     // ── FR-02: Simpan form booking ke session ────────────────────
     public function storeForm(Request $request)
-{
-    $request->validate([
-        'check_in'      => 'required|date|after_or_equal:today',
-        'check_out'     => 'required|date|after:check_in',
-        'guests'        => 'required|integer|min:1|max:10',
-        'first_name'    => 'required|string|max:100',
-        'last_name'     => 'required|string|max:100',
-        'email'         => 'required|email:rfc,dns',
-        'phone'         => 'required|string|regex:/^\+\d{1,3}\d{6,}$/',
-        'arrival_time'  => 'required|string',
-        'payment_method' => 'required|in:card,va,ewallet',
-    ]);
+    {
+        $request->validate([
+            'check_in'   => 'required|date|after_or_equal:today',
+            'check_out'  => 'required|date|after:check_in',
+            'guests'     => 'required|integer|min:1|max:10',
+            'first_name' => 'required|string|max:100',
+            'last_name'  => 'required|string|max:100',
+            'email'      => 'required|email',
+            'phone'      => 'required|string|max:20',
+            'country'    => 'required|string|max:5',
+        ]);
 
-    // #9 — Minimal 2 malam
-    $nights = Carbon::parse($request->check_in)->diffInDays(Carbon::parse($request->check_out));
-    if ($nights < 2) {
-        return back()->withErrors(['check_out' => 'Minimum stay adalah 2 malam.'])->withInput();
+        // Cek ketersediaan tanggal
+        if (!$this->isDateAvailable($request->check_in, $request->check_out)) {
+            return back()->withErrors(['check_in' => 'Tanggal yang dipilih sudah tidak tersedia.'])->withInput();
+        }
+
+        // Hitung harga
+        $pricePerNight = $this->getPriceForDate($request->check_in);
+        $nights        = Carbon::parse($request->check_in)->diffInDays(Carbon::parse($request->check_out));
+        $subtotal      = $pricePerNight * $nights;
+        $discount      = 0;
+        $promoCode     = null;
+
+        // Terapkan promo jika ada
+        if ($request->filled('promo_code')) {
+            $checkInDate = Carbon::parse($request->check_in)->toDateString();
+            $promo = Promo::where('code', strtoupper($request->promo_code))
+                ->where('is_active', true)
+                ->whereDate('valid_from', '<=', $checkInDate)
+                ->whereDate('valid_until', '>=', $checkInDate)
+                ->first();
+
+            if ($promo) {
+                $discount  = $subtotal * ($promo->discount_percent / 100);
+                $promoCode = $promo->code;
+            }
+        }
+
+        $session = array_merge($request->all(), [
+            'price_per_night' => $pricePerNight,
+            'nights'          => $nights,
+            'subtotal'        => $subtotal,
+            'discount_amount' => $discount,
+            'total_price'     => $subtotal - $discount,
+            'promo_code'      => $promoCode,
+        ]);
+
+        session(['booking' => $session]);
+        return redirect()->route('booking.confirmation');
     }
 
-    // Auto-cancel booking PENDING yang sudah expired
-    Booking::where('status', 'PENDING')
-    ->where('expires_at', '<', now())
-    ->update(['status' => 'CANCELLED']);
-
-    // Cek ketersediaan tanggal
-    if (!$this->isDateAvailable($request->check_in, $request->check_out)) {
-        return back()->withErrors(['check_in' => 'Tanggal yang dipilih sudah tidak tersedia.'])->withInput();
-    }
-
-    // #10 — Harga tanpa tax & service fee
-    $pricePerNight = $this->getPriceForDate($request->check_in);
-    $subtotal      = $pricePerNight * $nights;  // total = harga villa saja
-    $discount      = 0;
-    $promoCode     = null;
-
-    // Terapkan promo jika ada
-$discount  = 0;
-$promoCode = null;
-
-if ($request->filled('promo_code')) {
-    $promoCode = strtoupper($request->promo_code);
-
-    // Cek di database
-    $promo = Promo::where('code', $promoCode)
-        ->where('is_active', true)
-        ->where('valid_from', '<=', $request->check_in)
-        ->where('valid_until', '>=', $request->check_in)
-        ->first();
-
-    if ($promo) {
-        $discount = $subtotal * ($promo->discount_percent / 100);
-    } else {
-        $promoCode = null; // kode tidak valid
-    }
-}
-    $totalPrice = $subtotal - $discount;
-
-    session(['booking' => array_merge($request->all(), [
-        'price_per_night' => $pricePerNight,
-        'nights'          => $nights,
-        'subtotal'        => $subtotal,
-        'discount_amount' => $discount,
-        'total_price'     => $totalPrice,
-        'promo_code'      => $promoCode,
-    ])]);
-
-    return redirect()->route('booking.confirmation');
-}
     // ── FR-03: Halaman konfirmasi ─────────────────────────────────
     public function confirmation()
     {
@@ -98,30 +82,35 @@ if ($request->filled('promo_code')) {
 
     // ── FR-04: Simpan booking ke database ────────────────────────
     public function storeConfirmation(Request $request)
-{
-    $data = session('booking');
-    if (!$data) return redirect()->route('booking.form');
+    {
+        $data = session('booking');
+        if (!$data) return redirect()->route('booking.form');
 
-    $booking = Booking::create([
-        'booking_code'    => Booking::generateCode(),
-        'check_in'        => $data['check_in'],
-        'check_out'       => $data['check_out'],
-        'guests'          => $data['guests'],
-        'first_name'      => $data['first_name'],
-        'last_name'       => $data['last_name'],
-        'email'           => $data['email'],
-        'phone'           => $data['phone'],
-        'promo_code'      => $data['promo_code'] ?? null,
-        'price_per_night' => $data['price_per_night'],
-        'discount_amount' => $data['discount_amount'],
-        'total_price'     => $data['total_price'],  // sudah tanpa tax/fee
-        'status'          => 'PENDING',
-        'expires_at'      => now()->addHour(),
-    ]);
+        $booking = Booking::create([
+            'booking_code'    => Booking::generateCode(),
+            'check_in'        => $data['check_in'],
+            'check_out'       => $data['check_out'],
+            'guests'          => $data['guests'],
+            'first_name'      => $data['first_name'],
+            'last_name'       => $data['last_name'],
+            'email'           => $data['email'],
+            'phone'           => $data['phone'],
+            'country'         => $data['country'] ?? 'ID',
+            'promo_code'      => $data['promo_code'] ?? null,
+            'price_per_night' => $data['price_per_night'],
+            'discount_amount' => $data['discount_amount'],
+            'total_price'     => $data['total_price'],
+            'status'          => 'PENDING', // Menunggu pembayaran (1 jam)
+            'expires_at'      => now()->addHour(), // 1 jam untuk bayar
+        ]);
 
-    session(['booking_code' => $booking->booking_code]);
-    return redirect()->route('booking.invoice');
-}
+        // Simpan booking_code ke session untuk halaman berikutnya
+        session(['booking_code' => $booking->booking_code]);
+
+        // TODO FR-06: redirect ke Midtrans Snap (nanti pas payment gateway)
+        return redirect()->route('booking.invoice');
+    }
+
     // ── FR-05: Invoice ────────────────────────────────────────────
     public function invoice()
     {
@@ -137,53 +126,6 @@ if ($request->filled('promo_code')) {
         return view('booking.invoice', compact('booking'));
     }
 
-    // ── PDF Invoice Download ────────────────────────────────────
-    public function invoicePdf(Request $request)
-    {
-        $code    = $request->query('code') ?? session('booking_code');
-        $booking = $code ? Booking::where('booking_code', strtoupper($code))->first() : null;
-
-        if (!$booking) {
-            return redirect()->route('booking.form');
-        }
-
-        return view('booking.invoice-pdf', compact('booking'));
-    }
-
-    // ── FR-06: Payment failed / pending page ─────────────────────
-    public function pending(Request $request)
-    {
-        $code    = $request->query('code') ?? session('booking_code');
-        $booking = $code ? Booking::where('booking_code', strtoupper($code))->first() : null;
-
-        if (!$booking) {
-            return redirect()->route('booking.form');
-        }
-
-        // Auto-cancel kalau sudah expired
-        if ($booking->status === 'PENDING' && $booking->isExpired()) {
-            $booking->update(['status' => 'CANCELLED']);
-        }
-
-        // Calculate time remaining
-        $expiresAt = Carbon::parse($booking->expires_at);
-        $now = now();
-        
-        if ($expiresAt <= $now) {
-            $timeRemaining = '00:00:00';
-        } else {
-            $diff = $expiresAt->diff($now);
-            $timeRemaining = sprintf(
-                '%02d:%02d:%02d',
-                $diff->h,
-                $diff->i,
-                $diff->s
-            );
-        }
-
-        return view('booking.pending-clean', compact('booking', 'timeRemaining'));
-    }
-
     // ── FR-08: Status page ────────────────────────────────────────
     public function status(Request $request)
     {
@@ -196,35 +138,124 @@ if ($request->filled('promo_code')) {
                 $booking->update(['status' => 'CANCELLED']);
             }
         }
-        
-        // Jika CONFIRMED, langsung tampilkan done page
-        if ($booking && $booking->status === 'CONFIRMED') {
-            return view('booking.done-clean', compact('booking'));
-        }
-        
         return view('booking.status', compact('booking'));
     }
 
-    // ── API: Tanggal tidak tersedia (untuk kalender frontend) ─────
+    
+
+    public function applyPromo(Request $request)
+{
+    $code    = strtoupper(trim($request->promo_code ?? ''));
+    $checkIn = Carbon::parse($request->check_in ?? now())->toDateString();
+
+    if (!$code) {
+        return response()->json(['valid' => false, 'message' => 'Please enter a promo code.']);
+    }
+
+    $promo = Promo::where('code', $code)
+        ->where('is_active', true)
+        ->whereDate('valid_from', '<=', $checkIn)
+        ->whereDate('valid_until', '>=', $checkIn)
+        ->first();
+
+    if ($promo) {
+        return response()->json([
+            'valid'            => true,
+            'discount_percent' => (float) $promo->discount_percent,
+            'message'          => "Promo applied! {$promo->discount_percent}% off.",
+        ]);
+    }
+
+    return response()->json(['valid' => false, 'message' => 'Invalid promo code.']);
+}
+    public function storeManualBooking(Request $request)
+    {
+        $request->validate([
+            'check_in'  => 'required|date|after_or_equal:today',
+            'check_out' => 'required|date|after:check_in',
+            'guest_name' => 'required|string|max:200',
+            'phone'      => 'required|string|max:20',
+            'guests'     => 'required|integer|min:1|max:10',
+            'email'      => 'nullable|email',
+            'notes'      => 'nullable|string|max:255',
+        ]);
+
+        if (!$this->isDateAvailable($request->check_in, $request->check_out)) {
+            return back()->withErrors(['check_in' => 'Tanggal yang dipilih sudah tidak tersedia.'])->withInput();
+        }
+
+        $nameParts = preg_split('/\s+/', trim($request->guest_name), 2);
+        $firstName = $nameParts[0] ?? 'Guest';
+        $lastName  = $nameParts[1] ?? '';
+
+        $pricePerNight = $this->getPriceForDate($request->check_in);
+        $nights        = Carbon::parse($request->check_in)->diffInDays(Carbon::parse($request->check_out));
+        $subtotal      = $pricePerNight * $nights;
+
+        Booking::create([
+            'booking_code'    => Booking::generateCode(),
+            'check_in'        => $request->check_in,
+            'check_out'       => $request->check_out,
+            'guests'          => $request->guests,
+            'first_name'      => $firstName,
+            'last_name'       => $lastName,
+            'email'           => $request->email ?? 'manual@swarnamandapa.com',
+            'phone'           => $request->phone,
+            'country'         => 'ID',
+            'promo_code'      => null,
+            'price_per_night' => $pricePerNight,
+            'discount_amount' => 0,
+            'total_price'     => $subtotal,
+            'status'          => 'CONFIRMED',
+            'is_manual'       => true,
+            'expires_at'      => null,
+            'notes'           => $request->notes,
+        ]);
+
+        return redirect()->route('admin.booking_list')->with('success', 'Manual booking berhasil disimpan dan sekarang terlihat di kalender.');
+    }
+
     public function unavailableDates()
     {
         return response()->json($this->getBookedDates());
     }
 
-    // ── API: Check booking status (untuk payment detection) ────────
-    public function bookingStatus($code)
+    /**
+     * API endpoint untuk kalender admin
+     * Mengembalikan: booked dates dan informasi status
+     */
+    public function getCalendarData(Request $request)
     {
-        $booking = Booking::where('booking_code', strtoupper($code))->first();
-        
-        if (!$booking) {
-            return response()->json(['status' => 'NOT_FOUND'], 404);
+        $year  = $request->query('year', now()->year);
+        $month = $request->query('month', now()->month);
+
+        // Tanggal awal dan akhir bulan
+        $startOfMonth = Carbon::createFromDate($year, $month, 1);
+        $endOfMonth   = $startOfMonth->copy()->endOfMonth();
+
+        // Ambil booking aktif dalam bulan ini
+        $bookings = Booking::whereIn('status', ['PENDING', 'CONFIRMED'])
+            ->where('check_out', '>', $startOfMonth)
+            ->where('check_in', '<', $endOfMonth->addDay())
+            ->get(['check_in', 'check_out', 'status']);
+
+        // Format booked dates
+        $bookedDates = [];
+        foreach ($bookings as $b) {
+            $current = Carbon::parse($b->check_in)->copy();
+            $end     = Carbon::parse($b->check_out);
+
+            while ($current->lte($end)) {
+                $bookedDates[$current->toDateString()] = [
+                    'status' => $b->status,
+                    'type'   => 'booking',
+                ];
+                $current->addDay();
+            }
         }
 
         return response()->json([
-            'booking_code' => $booking->booking_code,
-            'status'       => $booking->status,
-            'paid_at'      => $booking->paid_at,
-            'expires_at'   => $booking->expires_at,
+            'booked' => $bookedDates,
         ]);
     }
 
@@ -235,22 +266,16 @@ if ($request->filled('promo_code')) {
     private function getBookedDates(): array
     {
         // Ambil booking aktif (PENDING atau CONFIRMED)
-        $bookings = Booking::where(function ($q) {
-        $q->where('status', 'CONFIRMED');
-    })
-    ->orWhere(function ($q) {
-        $q->where('status', 'PENDING')
-          ->where('expires_at', '>', now()); // hanya PENDING yang belum expired
-    })
-    ->where('check_out', '>=', today())
-    ->get(['check_in', 'check_out', 'status', 'expires_at']);
+        $bookings = Booking::whereIn('status', ['PENDING', 'CONFIRMED'])
+            ->where('check_out', '>=', today())
+            ->get(['check_in', 'check_out', 'status']);
 
         $dates = [];
         foreach ($bookings as $b) {
             $current = Carbon::parse($b->check_in)->copy();
             $end     = Carbon::parse($b->check_out);
 
-            while ($current->lt($end)) {
+            while ($current->lte($end)) {
                 $dates[$current->toDateString()] = $b->status; // 'PENDING' atau 'CONFIRMED'
                 $current->addDay();
             }
@@ -259,21 +284,14 @@ if ($request->filled('promo_code')) {
         return $dates;
     }
 
-   private function isDateAvailable(string $checkIn, string $checkOut): bool
-{
-    $conflict = Booking::where('check_in', '<', $checkOut)
-        ->where('check_out', '>', $checkIn)
-        ->where(function ($q) {
-            $q->where('status', 'CONFIRMED')
-              ->orWhere(function ($q2) {
-                  $q2->where('status', 'PENDING')
-                     ->where('expires_at', '>', now());
-              });
-        })
-        ->exists();
+    private function isDateAvailable(string $checkIn, string $checkOut): bool
+    {
+        return !Booking::whereIn('status', ['PENDING', 'CONFIRMED'])
+            ->where('check_in', '<', $checkOut)
+            ->where('check_out', '>', $checkIn)
+            ->exists();
+    }
 
-    return !$conflict;
-}
     private function getPriceForDate(string $date): float
     {
         $price = VillaPrice::where('is_active', true)
@@ -285,5 +303,65 @@ if ($request->filled('promo_code')) {
             ->first();
 
         return $price ? (float) $price->price_per_night : 5000000; // default 5jt
+    }
+
+    // ── ADMIN: Update Booking ─────────────────────────────────────
+    public function updateBooking(Request $request, $id)
+    {
+        $booking = Booking::findOrFail($id);
+
+        $validated = $request->validate([
+            'first_name'       => 'required|string|max:100',
+            'last_name'        => 'required|string|max:100',
+            'email'            => 'required|email',
+            'phone'            => 'required|string|max:20',
+            'check_in'         => 'required|date',
+            'check_out'        => 'required|date|after:check_in',
+            'guests'           => 'required|integer|min:1|max:10',
+            'price_per_night'  => 'required|numeric|min:0',
+            'discount_amount'  => 'required|numeric|min:0',
+            'status'           => 'required|in:PENDING,CONFIRMED,CANCELLED',
+        ]);
+
+        // Cek ketersediaan tanggal (kecuali booking ini sendiri)
+        $conflicting = Booking::whereIn('status', ['PENDING', 'CONFIRMED'])
+            ->where('id', '!=', $id)
+            ->where('check_in', '<', $validated['check_out'])
+            ->where('check_out', '>', $validated['check_in'])
+            ->exists();
+
+        if ($conflicting) {
+            return response()->json(['message' => 'Tanggal sudah dipesan oleh booking lain.'], 422);
+        }
+
+        // Hitung total price
+        $nights = Carbon::parse($validated['check_in'])->diffInDays(Carbon::parse($validated['check_out']));
+        $subtotal = $validated['price_per_night'] * $nights;
+        $totalPrice = $subtotal - $validated['discount_amount'];
+
+        $booking->update([
+            'first_name'       => $validated['first_name'],
+            'last_name'        => $validated['last_name'],
+            'email'            => $validated['email'],
+            'phone'            => $validated['phone'],
+            'check_in'         => $validated['check_in'],
+            'check_out'        => $validated['check_out'],
+            'guests'           => $validated['guests'],
+            'price_per_night'  => $validated['price_per_night'],
+            'discount_amount'  => $validated['discount_amount'],
+            'total_price'      => $totalPrice,
+            'status'           => $validated['status'],
+        ]);
+
+        return response()->json(['message' => 'Booking updated successfully', 'booking' => $booking]);
+    }
+
+    // ── ADMIN: Delete Booking ─────────────────────────────────────
+    public function destroyBooking($id)
+    {
+        $booking = Booking::findOrFail($id);
+        $booking->delete();
+
+        return redirect()->route('admin.booking_list')->with('success', 'Booking deleted successfully');
     }
 }

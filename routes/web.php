@@ -1,13 +1,18 @@
 <?php
 
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\PromoController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\AdminAuthController;
+use App\Models\Booking;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ReviewController;
-use App\Models\Admin;
-use Illuminate\Http\Request;
 
 Route::get('/', function () {
-    return view('index');
+    $testimonials = \App\Models\GuestReview::where('status', 'approved')
+                        ->latest()
+                        ->get();
+    return view('index', compact('testimonials'));
 });
 
 Route::get('/contact-us', function () {
@@ -20,7 +25,7 @@ Route::get('/gallery', function () {
 
 // ─── Reviews (PUBLIC) ────────────────────────────────────────
 Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews');
-Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store');
+Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store'); // ← tambah ini
 
 Route::prefix('booking')->name('booking.')->group(function () {
     Route::get('/', [BookingController::class, 'form'])->name('form');
@@ -28,86 +33,142 @@ Route::prefix('booking')->name('booking.')->group(function () {
     Route::get('/confirmation', [BookingController::class, 'confirmation'])->name('confirmation');
     Route::post('/confirmation', [BookingController::class, 'storeConfirmation'])->name('confirmation.store');
     Route::get('/invoice', [BookingController::class, 'invoice'])->name('invoice');
-    Route::get('/invoice/pdf', [BookingController::class, 'invoicePdf'])->name('invoice.pdf');
     Route::get('/status', [BookingController::class, 'status'])->name('status');
-    Route::get('/pending', [BookingController::class, 'pending'])->name('pending');
 });
 
-Route::get('/admin/login', function () {
-    return view('admin.login');
-})->name('admin.login');
+// ─── Admin Authentication ────────────────────────────────────
+Route::get('/admin/login', [AdminAuthController::class, 'showLogin'])->name('admin.login');
+Route::post('/admin/login', [AdminAuthController::class, 'login'])->name('admin.login.submit');
 
-Route::post('/admin/login', function (\Illuminate\Http\Request $request) {
-    $admin = Admin::authenticate($request->input('email'), $request->input('password'));
+// ─── Admin Routes (Protected) ────────────────────────────────
+Route::middleware(['admin.auth'])->prefix('admin')->name('admin.')->group(function () {
+    Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
 
-    if ($admin) {
-        session(['admin_id' => $admin->id, 'admin_name' => $admin->name, 'admin_email' => $admin->email]);
-        return redirect()->route('admin.dashboard');
-    }
+    Route::get('/dashboard', function () {
+        $totalBookings     = Booking::count();
+        $pendingBookings   = Booking::where('status', 'PENDING')->count();
+        $confirmedBookings = Booking::where('status', 'CONFIRMED')->count();
+        $cancelledBookings = Booking::where('status', 'CANCELLED')->count();
+        $revenue           = Booking::where('status', 'CONFIRMED')->sum('total_price');
+        $recentBookings    = Booking::orderByDesc('created_at')->take(6)->get();
 
-    return redirect()->back()->withErrors(['email' => 'Email atau Password salah!'])->withInput();
-})->name('admin.login.submit');
+        return view('admin.dashboard', compact(
+            'totalBookings',
+            'pendingBookings',
+            'confirmedBookings',
+            'cancelledBookings',
+            'revenue',
+            'recentBookings'
+        ));
+    })->name('dashboard');
 
-Route::post('/admin/logout', function (Request $request) {
-    $request->session()->forget(['admin_id', 'admin_name', 'admin_email']);
-    $request->session()->invalidate();
-    $request->session()->regenerateToken();
-    return redirect()->route('admin.login');
-})->name('admin.logout');
+    Route::get('/edit-profile', function () {
+        return view('admin.edit_profile');
+    })->name('edit_profile');
 
-Route::get('/admin/dashboard', function () {
-    return view('admin.dashboard');
-})->name('admin.dashboard');
+    Route::post('/edit-profile', function (\Illuminate\Http\Request $request) {
+        session([
+            'admin_name'  => $request->input('name', 'EGA MUTIARA'),
+            'admin_email' => $request->input('email', 'admin@gmail.com'),
+        ]);
 
-Route::get('/admin/edit-profile', function () {
-    return view('admin.edit_profile');
-})->name('admin.edit_profile');
+        return redirect()->route('admin.dashboard')->with('profile_updated', true);
+    })->name('edit_profile.submit');
 
-Route::post('/admin/edit-profile', function (\Illuminate\Http\Request $request) {
-    session([
-        'admin_name'  => $request->input('name', 'EGA MUTIARA'),
-        'admin_email' => $request->input('email', 'admin@gmail.com'),
-    ]);
+    Route::get('/manual-booking', function () {
+        return view('admin.manual_booking');
+    })->name('manual_booking');
 
-    return redirect()->route('admin.dashboard')->with('profile_updated', true);
-})->name('admin.edit_profile.submit');
+    Route::post('/manual-booking', [BookingController::class, 'storeManualBooking'])->name('manual_booking.submit');
 
-Route::get('/admin/manual-booking', function () {
-    return view('admin.manual_booking');
-})->name('admin.manual_booking');
+    Route::get('/booking-list', function () {
+        $bookings = Booking::orderByDesc('created_at')->get();
+        return view('admin.booking_list', compact('bookings'));
+    })->name('booking_list');
 
-Route::get('/admin/booking-list', function () {
-    return view('admin.booking_list');
-})->name('admin.booking_list');
+    // Booking CRUD routes
+    Route::put('/booking-list/{id}', [BookingController::class, 'updateBooking'])->name('booking.update');
+    Route::delete('/booking-list/{id}', [BookingController::class, 'destroyBooking'])->name('booking.destroy');
 
-Route::get('/admin/availability-calendar', function () {
-    return view('admin.calendar');
-})->name('admin.calendar');
+    Route::get('/availability-calendar', function () {
+        return view('admin.calendar');
+    })->name('calendar');
 
-Route::get('/admin/villa-settings', function () {
-    return view('admin.villa_settings');
-})->name('admin.villa_settings');
+    Route::get('/villa-settings', function () {
+        return view('admin.villa_settings');
+    })->name('villa_settings');
 
-Route::post('/admin/villa-settings', function (\Illuminate\Http\Request $request) {
-    $promoName = $request->input('promo_name', 'Configuration');
+    // Base Price Update
+    Route::post('/villa-settings/base-price', function (\Illuminate\Http\Request $request) {
+        $request->validate([
+            'base_price' => 'required|numeric|min:0',
+        ]);
 
-    return redirect()->back()->with('success', "{$promoName} config has been successfully saved!");
+        \App\Models\VillaPrice::updateOrCreate(
+            ['is_active' => true],
+            [
+                'price_per_night' => $request->base_price,
+                'valid_from'      => now()->toDateString(),
+                'valid_until'     => null,
+                'is_active'       => true,
+            ]
+        );
+
+        return redirect()->route('admin.villa_settings')->with('success', 'Base price updated successfully!');
+    })->name('villa_settings.base_price');
+
+    // Promo Update
+    Route::post('/villa-settings', function (\Illuminate\Http\Request $request) {
+        $request->validate([
+            'promo_name'       => 'required|string|max:100',
+            'promo_code'       => 'required|string|max:50',
+            'discount_percent' => 'required|numeric|min:1|max:100',
+            'valid_from'       => 'required|date',
+            'valid_until'      => 'required|date|after_or_equal:valid_from',
+            'promo_status'     => 'required|in:active,inactive',
+        ]);
+
+        \App\Models\Promo::updateOrCreate(
+            ['code' => strtoupper($request->promo_code)],
+            [
+                'name'             => $request->promo_name,
+                'discount_percent' => $request->discount_percent,
+                'valid_from'       => $request->valid_from,
+                'valid_until'      => $request->valid_until,
+                'is_active'        => $request->promo_status === 'active',
+            ]
+        );
+
+        return redirect()->back()->with('success', "Promo '{$request->promo_name}' berhasil disimpan!");
+    })->name('villa_settings.save');
+
+    // ─── Promo Management ─────────────────────────────────────────
+    Route::get('/promo/{promo}/edit', [PromoController::class, 'edit'])->name('promo.edit');
+    Route::put('/promo/{promo}', [PromoController::class, 'update'])->name('promo.update');
+    Route::delete('/promo/{promo}', [PromoController::class, 'destroy'])->name('promo.destroy');
+
+    // ─── Reviews (ADMIN) ─────────────────────────────────────────
+    Route::get('/reviews', [ReviewController::class, 'adminIndex'])->name('reviews.index');
+    Route::patch('/reviews/{review}/approve', [ReviewController::class, 'approve'])->name('reviews.approve');
+    Route::patch('/reviews/{review}/reject', [ReviewController::class, 'reject'])->name('reviews.reject');
+    Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
 });
 
-// ─── Reviews (ADMIN) ─────────────────────────────────────────
-Route::get('/admin/reviews', [ReviewController::class, 'adminIndex'])->name('admin.reviews.index');
-Route::patch('/admin/reviews/{review}/approve', [ReviewController::class, 'approve'])->name('admin.reviews.approve');
-Route::patch('/admin/reviews/{review}/reject', [ReviewController::class, 'reject'])->name('admin.reviews.reject');
-Route::delete('/admin/reviews/{review}', [ReviewController::class, 'destroy'])->name('admin.reviews.destroy');
-
-// ─── API ─────────────────────────────────────────────────────
+// ─── API ───────────────────────────────────────────
+// ─── Booking API (untuk kalender) ────────────────────────────
 Route::get('/api/unavailable-dates', [BookingController::class, 'unavailableDates'])->name('booking.unavailable');
-Route::get('/api/booking-status/{code}', [BookingController::class, 'bookingStatus'])->name('api.booking.status');
-
-use App\Http\Controllers\PaymentController;
+Route::get('/api/calendar-data', [BookingController::class, 'getCalendarData'])->name('booking.calendarData');
+Route::post('/api/apply-promo', [BookingController::class, 'applyPromo'])->name('booking.applyPromo');
 
 Route::post('/payment/create', [PaymentController::class, 'createPayment'])->name('payment.create');
-Route::post('/payment/callback', [PaymentController::class, 'callback'])
-    ->name('payment.callback')
-    ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+Route::post('/payment/callback', [PaymentController::class, 'callback'])->name('payment.callback');
 Route::get('/payment/return', [PaymentController::class, 'returnPage'])->name('payment.return');
+
+Route::get('/api/test-promo', function() {
+    $promo = \App\Models\Promo::first();
+    return response()->json([
+        'table_exists' => true,
+        'promo_count'  => \App\Models\Promo::count(),
+        'sample'       => $promo,
+    ]);
+});
