@@ -79,6 +79,205 @@
         box-shadow: 0 0 0 3px rgba(184, 146, 74, 0.1);
     }
 
+    /* ── Custom Calendar Styles ─────────────────────────────────── */
+    .cal-wrap {
+        position: relative;
+    }
+
+    .cal-trigger {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.75rem 1rem;
+        border: 1px solid #EBEBEB;
+        border-radius: 8px;
+        background: #FFFFFF;
+        cursor: pointer;
+        transition: all 0.2s;
+        min-height: 42px;
+        font-size: 0.9rem;
+        color: var(--text-dark);
+    }
+
+    .cal-trigger:hover,
+    .cal-trigger.open {
+        border-color: var(--brand-gold);
+        box-shadow: 0 0 0 3px rgba(184, 146, 74, 0.1);
+    }
+
+    .cal-popup {
+        position: absolute;
+        z-index: 9999;
+        background: #FFFFFF;
+        border: 1px solid #EBEBEB;
+        border-radius: 12px;
+        box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
+        padding: 1rem;
+        width: 320px;
+        display: none;
+        top: 100%;
+        left: 0;
+        margin-top: 0.5rem;
+    }
+
+    .cal-popup.show {
+        display: block !important;
+    }
+
+    .cal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+    }
+
+    .cal-nav {
+        background: none;
+        border: 1.5px solid #EBEBEB;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        color: #666;
+        transition: all 0.2s;
+        font-size: 1.1rem;
+    }
+
+    .cal-nav:hover {
+        border-color: var(--brand-gold);
+        color: var(--brand-gold);
+    }
+
+    .cal-month-label {
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: #3a3028;
+    }
+
+    .cal-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 2px;
+    }
+
+    .cal-dow {
+        text-align: center;
+        font-size: 0.65rem;
+        font-weight: 600;
+        color: #999;
+        text-transform: uppercase;
+        padding: 0.25rem 0;
+    }
+
+    .cal-day {
+        text-align: center;
+        padding: 0.35rem 0.1rem;
+        font-size: 0.82rem;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.15s;
+        position: relative;
+        line-height: 1.4;
+    }
+
+    .cal-day:hover:not(.cal-disabled):not(.cal-booked):not(.cal-pending) {
+        background: #f5ecd9;
+        color: var(--brand-gold);
+    }
+
+    .cal-day.cal-today {
+        font-weight: 700;
+        color: var(--brand-gold);
+    }
+
+    .cal-day.cal-selected {
+        background: var(--brand-gold) !important;
+        color: #fff !important;
+        font-weight: 600;
+    }
+
+    .cal-day.cal-in-range {
+        background: #f5ecd9;
+        color: var(--brand-gold);
+    }
+
+    .cal-day.cal-disabled {
+        color: #ccc;
+        opacity: 0.35;
+        cursor: default;
+        pointer-events: none;
+    }
+
+    .cal-day.cal-booked {
+        background: #fee2e2;
+        color: #ef4444;
+        cursor: not-allowed;
+        font-weight: 600;
+    }
+
+    .cal-day.cal-booked::after {
+        content: '';
+        position: absolute;
+        bottom: 3px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: #ef4444;
+    }
+
+    .cal-day.cal-pending {
+        background: #fef9c3;
+        color: #ca8a04;
+        cursor: not-allowed;
+        font-weight: 600;
+    }
+
+    .cal-day.cal-pending::after {
+        content: '';
+        position: absolute;
+        bottom: 3px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: #eab308;
+    }
+
+    .cal-day.cal-other-month {
+        opacity: 0.25;
+        pointer-events: none;
+    }
+
+    .cal-legend {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid #EBEBEB;
+        flex-wrap: wrap;
+    }
+
+    .cal-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.7rem;
+        color: #999;
+    }
+
+    .cal-legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+        flex-shrink: 0;
+    }
+
     .btn-submit {
         background-color: var(--brand-gold-dark);
         color: #FFFFFF;
@@ -256,30 +455,18 @@
             <form action="{{ route('admin.manual_booking.submit') }}" method="POST">
                 @csrf
                 
+                {{-- Hidden date inputs (submitted to backend) --}}
+                <input type="hidden" name="check_in"  id="check_in"  required>
+                <input type="hidden" name="check_out" id="check_out" required>
+                
                 <div class="row row-form">
                     <div class="col-md-6 mb-3 mb-md-0">
                         <label class="form-label">Check-in Date</label>
-                        <input type="hidden" name="check_in" id="check_in" value="{{ old('check_in') }}" required>
-                        <div class="cal-wrap" id="wrap-ci">
-                            <div class="cal-trigger" id="trigger-ci" onclick="openCal('ci')">
-                                <i class="bi bi-calendar3 text-gold" style="font-size:.85rem"></i>
-                                <span class="cal-placeholder" id="display-ci">dd/mm/yyyy</span>
-                            </div>
-                            <div class="cal-popup" id="popup-ci"></div>
-                        </div>
-                        <div class="invalid-hint" id="hint-ci">Please select check-in date</div>
+                        <input type="date" class="form-control" name="check_in" value="{{ old('check_in') }}" required>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Check-out Date</label>
-                        <input type="hidden" name="check_out" id="check_out" value="{{ old('check_out') }}" required>
-                        <div class="cal-wrap" id="wrap-co">
-                            <div class="cal-trigger" id="trigger-co" onclick="openCal('co')">
-                                <i class="bi bi-calendar3 text-gold" style="font-size:.85rem"></i>
-                                <span class="cal-placeholder" id="display-co">dd/mm/yyyy</span>
-                            </div>
-                            <div class="cal-popup" id="popup-co"></div>
-                        </div>
-                        <div class="invalid-hint" id="hint-co">Please select check-out date</div>
+                        <input type="date" class="form-control" name="check_out" value="{{ old('check_out') }}" required>
                     </div>
                 </div>
 
@@ -319,6 +506,304 @@
         </div>
         </form>
     </div>
+
+    <script>
+    const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    const DAYS   = ["SU","MO","TU","WE","TH","FR","SA"];
+
+    let unavailDates = {};
+    let calState = {
+        which: null,
+        year:  new Date().getFullYear(),
+        month: new Date().getMonth(),
+        selectedCI: null,
+        selectedCO: null
+    };
+
+    const fmtDisplay = s => {
+        if (!s) return 'dd/mm/yyyy';
+        const [y, m, dd] = s.split('-');
+        return `${dd}/${m}/${y}`;
+    };
+
+    async function loadUnavailableDates() {
+        try {
+            const resp = await fetch('/api/unavailable-dates');
+            if (!resp.ok) throw new Error(`API ${resp.status}`);
+            unavailDates = await resp.json();
+        } catch (e) {
+            console.error('Error loading dates:', e);
+        }
+    }
+
+    function openCal(which, e) {
+        if (e) e.stopPropagation();
+
+        const popup     = document.getElementById('popup-' + which);
+        const isAlready = popup.classList.contains('show');
+
+        // Tutup semua dulu
+        closeCals();
+
+        if (isAlready) return; // toggle: klik lagi = tutup
+
+        calState.which = which;
+
+        let ref = new Date();
+        if (which === 'ci') {
+            if (calState.selectedCI) ref = new Date(calState.selectedCI + 'T00:00:00');
+        } else {
+            if (calState.selectedCO) {
+                ref = new Date(calState.selectedCO + 'T00:00:00');
+            } else if (calState.selectedCI) {
+                ref = new Date(calState.selectedCI + 'T00:00:00');
+                ref.setDate(ref.getDate() + 1);
+            }
+        }
+        calState.year  = ref.getFullYear();
+        calState.month = ref.getMonth();
+
+        renderCal(which);
+        popup.classList.add('show');
+        document.getElementById('trigger-' + which).classList.add('open');
+    }
+
+    function closeCals() {
+        ['ci','co'].forEach(w => {
+            document.getElementById('popup-' + w).classList.remove('show');
+            document.getElementById('trigger-' + w).classList.remove('open');
+        });
+        calState.which = null;
+    }
+
+    function renderCal(which) {
+        const popup  = document.getElementById('popup-' + which);
+        const today  = new Date(); today.setHours(0,0,0,0);
+        const y      = calState.year;
+        const m      = calState.month;
+        const first  = new Date(y, m, 1).getDay();
+        const total  = new Date(y, m + 1, 0).getDate();
+        const prevTotal = new Date(y, m, 0).getDate();
+
+        const minDate = (which === 'co' && calState.selectedCI)
+            ? (() => { const d = new Date(calState.selectedCI + 'T00:00:00'); d.setDate(d.getDate()+1); return d; })()
+            : today;
+
+        popup.innerHTML = '';
+
+        // ── Header ──
+        const header = document.createElement('div');
+        header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem';
+
+        const btnStyle = 'background:none;border:1.5px solid #ddd;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;color:#666;transition:all .2s;flex-shrink:0';
+
+        const btnPrev = document.createElement('button');
+        btnPrev.type = 'button';
+        btnPrev.innerHTML = '&#8249;';
+        btnPrev.style.cssText = btnStyle;
+        btnPrev.addEventListener('mouseenter', () => { btnPrev.style.borderColor='#b8924a'; btnPrev.style.color='#b8924a'; });
+        btnPrev.addEventListener('mouseleave', () => { btnPrev.style.borderColor='#ddd'; btnPrev.style.color='#666'; });
+        btnPrev.addEventListener('click', function(e) {
+            e.stopPropagation();
+            calState.month--;
+            if (calState.month < 0) { calState.month = 11; calState.year--; }
+            renderCal(which);
+        });
+
+        const btnNext = document.createElement('button');
+        btnNext.type = 'button';
+        btnNext.innerHTML = '&#8250;';
+        btnNext.style.cssText = btnStyle;
+        btnNext.addEventListener('mouseenter', () => { btnNext.style.borderColor='#b8924a'; btnNext.style.color='#b8924a'; });
+        btnNext.addEventListener('mouseleave', () => { btnNext.style.borderColor='#ddd'; btnNext.style.color='#666'; });
+        btnNext.addEventListener('click', function(e) {
+            e.stopPropagation();
+            calState.month++;
+            if (calState.month > 11) { calState.month = 0; calState.year++; }
+            renderCal(which);
+        });
+
+        const monthLabel = document.createElement('div');
+        monthLabel.style.cssText = "font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:600;color:#3a3028";
+        monthLabel.textContent = MONTHS[m] + ' ' + y;
+
+        header.appendChild(btnPrev);
+        header.appendChild(monthLabel);
+        header.appendChild(btnNext);
+        popup.appendChild(header);
+
+        // ── Grid ──
+        const grid = document.createElement('div');
+        grid.style.cssText = 'display:grid;grid-template-columns:repeat(7,1fr);gap:2px';
+
+        DAYS.forEach(d => {
+            const el = document.createElement('div');
+            el.style.cssText = 'text-align:center;font-size:.65rem;font-weight:600;color:#aaa;padding:.25rem 0';
+            el.textContent = d;
+            grid.appendChild(el);
+        });
+
+        // Trailing bulan sebelumnya
+        for (let i = first - 1; i >= 0; i--) {
+            const el = document.createElement('div');
+            el.style.cssText = 'text-align:center;padding:.35rem .1rem;font-size:.82rem;opacity:.2;line-height:1.6';
+            el.textContent = prevTotal - i;
+            grid.appendChild(el);
+        }
+
+        // Hari bulan ini
+        for (let day = 1; day <= total; day++) {
+            const mm      = String(m + 1).padStart(2, '0');
+            const dd      = String(day).padStart(2, '0');
+            const dateStr = `${y}-${mm}-${dd}`;
+            const dateObj = new Date(y, m, day);
+
+            const isPast    = dateObj < minDate;
+            const uStatus   = unavailDates[dateStr];
+            const isBooked  = uStatus === 'CONFIRMED';
+            const isPending = uStatus === 'PENDING';
+            const isSelCI   = dateStr === calState.selectedCI;
+            const isSelCO   = dateStr === calState.selectedCO;
+            const inRange   = calState.selectedCI && calState.selectedCO
+                              && dateStr > calState.selectedCI && dateStr < calState.selectedCO;
+            const isToday   = dateObj.getTime() === today.getTime();
+
+            const el = document.createElement('div');
+            el.style.cssText = 'text-align:center;padding:.35rem .1rem;font-size:.82rem;border-radius:6px;line-height:1.6;transition:background .15s;position:relative';
+            el.textContent = day;
+
+            if (isSelCI || isSelCO) {
+                el.style.background = '#b8924a';
+                el.style.color      = '#fff';
+                el.style.fontWeight = '600';
+                el.style.cursor     = 'pointer';
+                // Klik lagi untuk deselect / ganti
+                el.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    pickDate(dateStr, which);
+                });
+            } else if (inRange) {
+                el.style.background = '#f5ecd9';
+                el.style.color      = '#b8924a';
+                el.style.cursor     = 'pointer';
+                el.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    pickDate(dateStr, which);
+                });
+            } else if (isBooked || isPending) {
+                el.style.background    = isBooked ? '#fee2e2' : '#fef9c3';
+                el.style.color         = isBooked ? '#ef4444' : '#ca8a04';
+                el.style.fontWeight    = '600';
+                el.style.cursor        = 'not-allowed';
+                el.style.pointerEvents = 'none';
+                const dot = document.createElement('div');
+                dot.style.cssText = `position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:${isBooked ? '#ef4444' : '#eab308'}`;
+                el.appendChild(dot);
+            } else if (isPast) {
+                el.style.color  = '#ccc';
+                el.style.cursor = 'default';
+            } else {
+                el.style.cursor = 'pointer';
+                if (isToday) {
+                    el.style.fontWeight = '700';
+                    el.style.border     = '1.5px solid #b8924a';
+                    el.style.color      = '#b8924a';
+                } else {
+                    el.style.color = '#3a3028';
+                }
+                el.addEventListener('mouseenter', () => {
+                    el.style.background = '#f5ecd9';
+                    el.style.color      = '#b8924a';
+                });
+                el.addEventListener('mouseleave', () => {
+                    el.style.background = 'transparent';
+                    el.style.color      = isToday ? '#b8924a' : '#3a3028';
+                });
+                el.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    pickDate(dateStr, which);
+                });
+            }
+
+            grid.appendChild(el);
+        }
+
+        // Trailing bulan berikutnya
+        const filled    = first + total;
+        const remainder = filled % 7 === 0 ? 0 : 7 - (filled % 7);
+        for (let i = 1; i <= remainder; i++) {
+            const el = document.createElement('div');
+            el.style.cssText = 'text-align:center;padding:.35rem .1rem;font-size:.82rem;opacity:.2;line-height:1.6';
+            el.textContent = i;
+            grid.appendChild(el);
+        }
+
+        popup.appendChild(grid);
+
+        // ── Legend ──
+        const legend = document.createElement('div');
+        legend.style.cssText = 'display:flex;gap:.75rem;margin-top:.75rem;padding-top:.75rem;border-top:1px solid #eee;flex-wrap:wrap';
+        [
+            { bg:'#fee2e2', border:'#ef4444', label:'Fully Booked' },
+            { bg:'#fef9c3', border:'#eab308', label:'Pending'      },
+            { bg:'#b8924a', border:'',        label:'Selected'     },
+        ].forEach(li => {
+            const item = document.createElement('div');
+            item.style.cssText = 'display:flex;align-items:center;gap:.35rem;font-size:.7rem;color:#999';
+            const dot = document.createElement('div');
+            dot.style.cssText = `width:10px;height:10px;border-radius:3px;background:${li.bg};flex-shrink:0${li.border ? ';border:1.5px solid '+li.border : ''}`;
+            item.appendChild(dot);
+            item.appendChild(document.createTextNode(li.label));
+            legend.appendChild(item);
+        });
+        popup.appendChild(legend);
+    }
+
+    function pickDate(dateStr, which) {
+        if (which === 'ci') {
+            calState.selectedCI = dateStr;
+
+            if (calState.selectedCO && calState.selectedCO <= dateStr) {
+                calState.selectedCO = null;
+                document.getElementById('check_out').value = '';
+                const trigCO = document.getElementById('trigger-co');
+                trigCO.innerHTML = `<i class="bi bi-calendar3" style="font-size:.85rem;color:var(--brand-gold);"></i><span class="cal-placeholder">Select date</span>`;
+                trigCO.onclick = (e) => openCal('co', e);
+            }
+        } else {
+            calState.selectedCO = dateStr;
+        }
+
+        document.getElementById(which === 'ci' ? 'check_in' : 'check_out').value = dateStr;
+
+        const trigger = document.getElementById('trigger-' + which);
+        trigger.innerHTML = `<i class="bi bi-calendar3" style="font-size:.85rem;color:var(--brand-gold);"></i><span class="cal-val">${fmtDisplay(dateStr)}</span>`;
+        // Pasang ulang onclick karena innerHTML diganti
+        trigger.onclick = (e) => openCal(which, e);
+
+        renderCal(which);
+    }
+
+    // Tutup kalender kalau klik di luar
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.cal-wrap')) {
+            closeCals();
+        }
+    });
+
+    // Cegah popup menutup diri sendiri
+    document.querySelectorAll('.cal-popup').forEach(p => {
+        p.addEventListener('click', e => e.stopPropagation());
+    });
+
+    document.addEventListener('DOMContentLoaded', async function() {
+        // Pasang onclick awal
+        document.getElementById('trigger-ci').onclick = (e) => openCal('ci', e);
+        document.getElementById('trigger-co').onclick = (e) => openCal('co', e);
+
+        await loadUnavailableDates();
+    });
+</script>
 
 @endsection
 
