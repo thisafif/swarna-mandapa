@@ -46,6 +46,7 @@
 @if($status === 'CONFIRMED')
     @include('booking.done-clean')
 @else
+<div class="page-header fade-up">
     <span class="section-label">Reservations</span>
     <h1>Track Your <em>Booking</em></h1>
     <p>Your booking status and details are shown below.</p>
@@ -231,6 +232,7 @@
 
 </div>
 
+@endif
 @endsection
 
 @push('scripts')

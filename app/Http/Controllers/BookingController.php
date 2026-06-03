@@ -13,7 +13,6 @@ class BookingController extends Controller
     // ── FR-01: Tampil form booking ────────────────────────────────
     public function form()
     {
-        // Kirim tanggal-tanggal yang tidak tersedia ke kalender
         $bookedDates = $this->getBookedDates();
         return view('booking.form', compact('bookedDates'));
     }
@@ -29,22 +28,19 @@ class BookingController extends Controller
             'last_name'  => 'required|string|max:100',
             'email'      => 'required|email',
             'phone'      => 'required|string|max:20',
-            'country'    => 'required|string|max:5',
+            'country'    => 'nullable|string|max:5',
         ]);
 
-        // Cek ketersediaan tanggal
         if (!$this->isDateAvailable($request->check_in, $request->check_out)) {
             return back()->withErrors(['check_in' => 'Tanggal yang dipilih sudah tidak tersedia.'])->withInput();
         }
 
-        // Hitung harga
         $pricePerNight = $this->getPriceForDate($request->check_in);
         $nights        = Carbon::parse($request->check_in)->diffInDays(Carbon::parse($request->check_out));
         $subtotal      = $pricePerNight * $nights;
         $discount      = 0;
         $promoCode     = null;
 
-        // Terapkan promo jika ada
         if ($request->filled('promo_code')) {
             $checkInDate = Carbon::parse($request->check_in)->toDateString();
             $promo = Promo::where('code', strtoupper($request->promo_code))
@@ -74,11 +70,16 @@ class BookingController extends Controller
 
     // ── FR-03: Halaman konfirmasi ─────────────────────────────────
     public function confirmation()
-    {
-        $booking = session('booking');
-        if (!$booking) return redirect()->route('booking.form');
-        return view('booking.confirmation', compact('booking'));
-    }
+{
+    $booking = session('booking');
+    if (!$booking) return redirect()->route('booking.form');
+
+    // Kalau sudah ada booking_code di session, berarti sudah dikonfirmasi
+    // redirect ke invoice supaya tidak bisa konfirmasi ulang
+    if (session('booking_code')) return redirect()->route('booking.invoice');
+
+    return view('booking.confirmation', compact('booking'));
+}
 
     // ── FR-04: Simpan booking ke database ────────────────────────
     public function storeConfirmation(Request $request)
@@ -100,30 +101,65 @@ class BookingController extends Controller
             'price_per_night' => $data['price_per_night'],
             'discount_amount' => $data['discount_amount'],
             'total_price'     => $data['total_price'],
-            'status'          => 'PENDING', // Menunggu pembayaran (1 jam)
-            'expires_at'      => now()->addHour(), // 1 jam untuk bayar
+            'status'          => 'PENDING',
+            'expires_at'      => now()->addHour(),
         ]);
 
-        // Simpan booking_code ke session untuk halaman berikutnya
         session(['booking_code' => $booking->booking_code]);
-
-        // TODO FR-06: redirect ke Midtrans Snap (nanti pas payment gateway)
+        session()->forget('booking'); // hapus data form supaya tidak bisa konfirmasi ulang
         return redirect()->route('booking.invoice');
     }
 
     // ── FR-05: Invoice ────────────────────────────────────────────
     public function invoice()
     {
-        $code    = session('booking_code');
-        $booking = $code ? Booking::where('booking_code', $code)->first() : null;
+        // Guard: harus punya booking_code di session
+        $code = session('booking_code');
+        if (!$code) return redirect()->route('booking.form');
 
-        // Fallback ke session kalau booking belum tersimpan (dev mode)
-        if (!$booking) {
-            $data = session('booking', []);
-            return view('booking.invoice', ['booking' => (object) $data, 'fromSession' => true]);
-        }
+        $booking = Booking::where('booking_code', $code)->first();
+        if (!$booking) return redirect()->route('booking.form');
 
         return view('booking.invoice', compact('booking'));
+    }
+
+    // ── Invoice PDF ───────────────────────────────────────────────
+    public function invoicePdf(Request $request)
+    {
+        $code = $request->query('code') ?? session('booking_code');
+        if (!$code) return redirect()->route('booking.form');
+
+        $booking = Booking::where('booking_code', strtoupper($code))->first();
+        if (!$booking) return redirect()->route('booking.form');
+
+        return view('booking.invoice-pdf', compact('booking'));
+    }
+
+    // ── FR-06: Pending page ───────────────────────────────────────
+    public function pending(Request $request)
+    {
+        $code = $request->query('code') ?? session('booking_code');
+        if (!$code) return redirect()->route('booking.form');
+
+        $booking = Booking::where('booking_code', strtoupper($code))->first();
+        if (!$booking) return redirect()->route('booking.form');
+
+        // Auto-cancel kalau sudah expired
+        if ($booking->status === 'PENDING' && $booking->isExpired()) {
+            $booking->update(['status' => 'CANCELLED']);
+        }
+
+        $expiresAt = Carbon::parse($booking->expires_at);
+        $now       = now();
+
+        if ($expiresAt <= $now) {
+            $timeRemaining = '00:00:00';
+        } else {
+            $diff          = $expiresAt->diff($now);
+            $timeRemaining = sprintf('%02d:%02d:%02d', $diff->h, $diff->i, $diff->s);
+        }
+
+        return view('booking.pending-clean', compact('booking', 'timeRemaining'));
     }
 
     // ── FR-08: Status page ────────────────────────────────────────
@@ -133,7 +169,6 @@ class BookingController extends Controller
         if ($request->filled('code')) {
             $booking = Booking::where('booking_code', strtoupper($request->code))->first();
 
-            // Auto-cancel kalau sudah expired
             if ($booking && $booking->status === 'PENDING' && $booking->isExpired()) {
                 $booking->update(['status' => 'CANCELLED']);
             }
@@ -141,38 +176,39 @@ class BookingController extends Controller
         return view('booking.status', compact('booking'));
     }
 
-    
-
+    // ── Apply Promo ───────────────────────────────────────────────
     public function applyPromo(Request $request)
-{
-    $code    = strtoupper(trim($request->promo_code ?? ''));
-    $checkIn = Carbon::parse($request->check_in ?? now())->toDateString();
+    {
+        $code    = strtoupper(trim($request->promo_code ?? ''));
+        $checkIn = Carbon::parse($request->check_in ?? now())->toDateString();
 
-    if (!$code) {
-        return response()->json(['valid' => false, 'message' => 'Please enter a promo code.']);
+        if (!$code) {
+            return response()->json(['valid' => false, 'message' => 'Please enter a promo code.']);
+        }
+
+        $promo = Promo::where('code', $code)
+            ->where('is_active', true)
+            ->whereDate('valid_from', '<=', $checkIn)
+            ->whereDate('valid_until', '>=', $checkIn)
+            ->first();
+
+        if ($promo) {
+            return response()->json([
+                'valid'            => true,
+                'discount_percent' => (float) $promo->discount_percent,
+                'message'          => "Promo applied! {$promo->discount_percent}% off.",
+            ]);
+        }
+
+        return response()->json(['valid' => false, 'message' => 'Invalid promo code.']);
     }
 
-    $promo = Promo::where('code', $code)
-        ->where('is_active', true)
-        ->whereDate('valid_from', '<=', $checkIn)
-        ->whereDate('valid_until', '>=', $checkIn)
-        ->first();
-
-    if ($promo) {
-        return response()->json([
-            'valid'            => true,
-            'discount_percent' => (float) $promo->discount_percent,
-            'message'          => "Promo applied! {$promo->discount_percent}% off.",
-        ]);
-    }
-
-    return response()->json(['valid' => false, 'message' => 'Invalid promo code.']);
-}
+    // ── ADMIN: Manual Booking ─────────────────────────────────────
     public function storeManualBooking(Request $request)
     {
         $request->validate([
-            'check_in'  => 'required|date|after_or_equal:today',
-            'check_out' => 'required|date|after:check_in',
+            'check_in'   => 'required|date|after_or_equal:today',
+            'check_out'  => 'required|date|after:check_in',
             'guest_name' => 'required|string|max:200',
             'phone'      => 'required|string|max:20',
             'guests'     => 'required|integer|min:1|max:10',
@@ -212,39 +248,33 @@ class BookingController extends Controller
             'notes'           => $request->notes,
         ]);
 
-        return redirect()->route('admin.booking_list')->with('success', 'Manual booking berhasil disimpan dan sekarang terlihat di kalender.');
+        return redirect()->route('admin.booking_list')->with('success', 'Manual booking berhasil disimpan.');
     }
 
+    // ── API: Unavailable Dates ────────────────────────────────────
     public function unavailableDates()
     {
         return response()->json($this->getBookedDates());
     }
 
-    /**
-     * API endpoint untuk kalender admin
-     * Mengembalikan: booked dates dan informasi status
-     */
+    // ── API: Calendar Data (Admin) ────────────────────────────────
     public function getCalendarData(Request $request)
     {
         $year  = $request->query('year', now()->year);
         $month = $request->query('month', now()->month);
 
-        // Tanggal awal dan akhir bulan
         $startOfMonth = Carbon::createFromDate($year, $month, 1);
         $endOfMonth   = $startOfMonth->copy()->endOfMonth();
 
-        // Ambil booking aktif dalam bulan ini
         $bookings = Booking::whereIn('status', ['PENDING', 'CONFIRMED'])
             ->where('check_out', '>', $startOfMonth)
             ->where('check_in', '<', $endOfMonth->addDay())
             ->get(['check_in', 'check_out', 'status']);
 
-        // Format booked dates
         $bookedDates = [];
         foreach ($bookings as $b) {
             $current = Carbon::parse($b->check_in)->copy();
             $end     = Carbon::parse($b->check_out);
-
             while ($current->lte($end)) {
                 $bookedDates[$current->toDateString()] = [
                     'status' => $b->status,
@@ -254,9 +284,64 @@ class BookingController extends Controller
             }
         }
 
-        return response()->json([
-            'booked' => $bookedDates,
+        return response()->json(['booked' => $bookedDates]);
+    }
+
+    // ── ADMIN: Update Booking ─────────────────────────────────────
+    public function updateBooking(Request $request, $id)
+    {
+        $booking = Booking::findOrFail($id);
+
+        $validated = $request->validate([
+            'first_name'      => 'required|string|max:100',
+            'last_name'       => 'required|string|max:100',
+            'email'           => 'required|email',
+            'phone'           => 'required|string|max:20',
+            'check_in'        => 'required|date',
+            'check_out'       => 'required|date|after:check_in',
+            'guests'          => 'required|integer|min:1|max:10',
+            'price_per_night' => 'required|numeric|min:0',
+            'discount_amount' => 'required|numeric|min:0',
+            'status'          => 'required|in:PENDING,CONFIRMED,CANCELLED',
         ]);
+
+        $conflicting = Booking::whereIn('status', ['PENDING', 'CONFIRMED'])
+            ->where('id', '!=', $id)
+            ->where('check_in', '<', $validated['check_out'])
+            ->where('check_out', '>', $validated['check_in'])
+            ->exists();
+
+        if ($conflicting) {
+            return response()->json(['message' => 'Tanggal sudah dipesan oleh booking lain.'], 422);
+        }
+
+        $nights     = Carbon::parse($validated['check_in'])->diffInDays(Carbon::parse($validated['check_out']));
+        $subtotal   = $validated['price_per_night'] * $nights;
+        $totalPrice = $subtotal - $validated['discount_amount'];
+
+        $booking->update([
+            'first_name'      => $validated['first_name'],
+            'last_name'       => $validated['last_name'],
+            'email'           => $validated['email'],
+            'phone'           => $validated['phone'],
+            'check_in'        => $validated['check_in'],
+            'check_out'       => $validated['check_out'],
+            'guests'          => $validated['guests'],
+            'price_per_night' => $validated['price_per_night'],
+            'discount_amount' => $validated['discount_amount'],
+            'total_price'     => $totalPrice,
+            'status'          => $validated['status'],
+        ]);
+
+        return response()->json(['message' => 'Booking updated successfully', 'booking' => $booking]);
+    }
+
+    // ── ADMIN: Delete Booking ─────────────────────────────────────
+    public function destroyBooking($id)
+    {
+        $booking = Booking::findOrFail($id);
+        $booking->delete();
+        return redirect()->route('admin.booking_list')->with('success', 'Booking deleted successfully');
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -265,8 +350,13 @@ class BookingController extends Controller
 
     private function getBookedDates(): array
     {
-        // Ambil booking aktif (PENDING atau CONFIRMED)
-        $bookings = Booking::whereIn('status', ['PENDING', 'CONFIRMED'])
+        $bookings = Booking::where(function($q) {
+                $q->where('status', 'CONFIRMED')
+                  ->orWhere(function($q2) {
+                      $q2->where('status', 'PENDING')
+                         ->where('expires_at', '>', now());
+                  });
+            })
             ->where('check_out', '>=', today())
             ->get(['check_in', 'check_out', 'status']);
 
@@ -274,19 +364,23 @@ class BookingController extends Controller
         foreach ($bookings as $b) {
             $current = Carbon::parse($b->check_in)->copy();
             $end     = Carbon::parse($b->check_out);
-
             while ($current->lte($end)) {
-                $dates[$current->toDateString()] = $b->status; // 'PENDING' atau 'CONFIRMED'
+                $dates[$current->toDateString()] = $b->status;
                 $current->addDay();
             }
         }
-
         return $dates;
     }
 
-    private function isDateAvailable(string $checkIn, string $checkOut): bool
+ private function isDateAvailable(string $checkIn, string $checkOut): bool
     {
-        return !Booking::whereIn('status', ['PENDING', 'CONFIRMED'])
+        return !Booking::where(function($q) {
+                $q->where('status', 'CONFIRMED')
+                  ->orWhere(function($q2) {
+                      $q2->where('status', 'PENDING')
+                         ->where('expires_at', '>', now());
+                  });
+            })
             ->where('check_in', '<', $checkOut)
             ->where('check_out', '>', $checkIn)
             ->exists();
@@ -302,66 +396,6 @@ class BookingController extends Controller
             ->orderByDesc('valid_from')
             ->first();
 
-        return $price ? (float) $price->price_per_night : 5000000; // default 5jt
-    }
-
-    // ── ADMIN: Update Booking ─────────────────────────────────────
-    public function updateBooking(Request $request, $id)
-    {
-        $booking = Booking::findOrFail($id);
-
-        $validated = $request->validate([
-            'first_name'       => 'required|string|max:100',
-            'last_name'        => 'required|string|max:100',
-            'email'            => 'required|email',
-            'phone'            => 'required|string|max:20',
-            'check_in'         => 'required|date',
-            'check_out'        => 'required|date|after:check_in',
-            'guests'           => 'required|integer|min:1|max:10',
-            'price_per_night'  => 'required|numeric|min:0',
-            'discount_amount'  => 'required|numeric|min:0',
-            'status'           => 'required|in:PENDING,CONFIRMED,CANCELLED',
-        ]);
-
-        // Cek ketersediaan tanggal (kecuali booking ini sendiri)
-        $conflicting = Booking::whereIn('status', ['PENDING', 'CONFIRMED'])
-            ->where('id', '!=', $id)
-            ->where('check_in', '<', $validated['check_out'])
-            ->where('check_out', '>', $validated['check_in'])
-            ->exists();
-
-        if ($conflicting) {
-            return response()->json(['message' => 'Tanggal sudah dipesan oleh booking lain.'], 422);
-        }
-
-        // Hitung total price
-        $nights = Carbon::parse($validated['check_in'])->diffInDays(Carbon::parse($validated['check_out']));
-        $subtotal = $validated['price_per_night'] * $nights;
-        $totalPrice = $subtotal - $validated['discount_amount'];
-
-        $booking->update([
-            'first_name'       => $validated['first_name'],
-            'last_name'        => $validated['last_name'],
-            'email'            => $validated['email'],
-            'phone'            => $validated['phone'],
-            'check_in'         => $validated['check_in'],
-            'check_out'        => $validated['check_out'],
-            'guests'           => $validated['guests'],
-            'price_per_night'  => $validated['price_per_night'],
-            'discount_amount'  => $validated['discount_amount'],
-            'total_price'      => $totalPrice,
-            'status'           => $validated['status'],
-        ]);
-
-        return response()->json(['message' => 'Booking updated successfully', 'booking' => $booking]);
-    }
-
-    // ── ADMIN: Delete Booking ─────────────────────────────────────
-    public function destroyBooking($id)
-    {
-        $booking = Booking::findOrFail($id);
-        $booking->delete();
-
-        return redirect()->route('admin.booking_list')->with('success', 'Booking deleted successfully');
+        return $price ? (float) $price->price_per_night : 5000000;
     }
 }

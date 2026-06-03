@@ -33,6 +33,8 @@ Route::prefix('booking')->name('booking.')->group(function () {
     Route::get('/confirmation', [BookingController::class, 'confirmation'])->name('confirmation');
     Route::post('/confirmation', [BookingController::class, 'storeConfirmation'])->name('confirmation.store');
     Route::get('/invoice', [BookingController::class, 'invoice'])->name('invoice');
+    Route::get('/invoice/pdf', [BookingController::class, 'invoicePdf'])->name('invoice.pdf');
+    Route::get('/pending', [BookingController::class, 'pending'])->name('pending');
     Route::get('/status', [BookingController::class, 'status'])->name('status');
 });
 

@@ -388,31 +388,34 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const timerElement = document.getElementById('countdown');
-        if (!timerElement) return;
+    const timerElement = document.getElementById('countdown');
+    if (!timerElement) return;
 
-        let [hours, minutes, seconds] = timerElement.textContent.trim().split(':').map(Number);
-        let totalSeconds = hours * 3600 + minutes * 60 + seconds;
+    // Pakai expires_at dari database sebagai acuan — tidak reset saat refresh
+    const expiresAt = {{ \Carbon\Carbon::parse($booking->expires_at)->timestamp }} * 1000;
 
-        if (isNaN(totalSeconds) || totalSeconds < 0) {
-            totalSeconds = 3600;
+    const updateTimer = () => {
+        const diff = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+        const h = String(Math.floor(diff / 3600)).padStart(2, '0');
+        const m = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
+        const s = String(diff % 60).padStart(2, '0');
+
+        timerElement.textContent = `${h}:${m}:${s}`;
+
+        if (diff === 0) {
+            timerElement.style.color = '#ef4444';
+            timerElement.textContent = '00:00:00';
+            // Auto redirect ke status page kalau expired
+            setTimeout(() => {
+                window.location.href = '/booking/status?code={{ $booking->booking_code }}';
+            }, 2000);
+        } else {
+            setTimeout(updateTimer, 1000);
         }
+    };
 
-        const updateTimer = () => {
-            const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
-            const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
-            const s = String(totalSeconds % 60).padStart(2, '0');
-
-            timerElement.textContent = `${h}:${m}:${s}`;
-
-            if (totalSeconds > 0) {
-                totalSeconds--;
-                setTimeout(updateTimer, 1000);
-            }
-        };
-
-        updateTimer();
-    });
+    updateTimer();
+});
 </script>
 @endpush
 
