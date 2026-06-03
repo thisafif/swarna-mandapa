@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Admin;
 
 class AdminAuthController extends Controller
 {
@@ -24,14 +25,14 @@ class AdminAuthController extends Controller
             'password' => 'required',
         ]);
 
-        // Hardcoded credentials (untuk sekarang)
-        // TODO: Integrate dengan database User model nanti
-        if ($request->input('email') === 'admin@gmail.com' && $request->input('password') === 'admin123') {
-            // Simpan session
+        // Authenticate against admins table
+        $admin = Admin::authenticate($request->input('email'), $request->input('password'));
+        if ($admin) {
             session([
                 'admin_authenticated' => true,
-                'admin_email' => $request->input('email'),
-                'admin_name' => 'MEGA MUTIARA',
+                'admin_id' => $admin->id,
+                'admin_email' => $admin->email,
+                'admin_name' => $admin->name,
             ]);
 
             return redirect()->route('admin.dashboard')->with('success', 'Login berhasil!');
