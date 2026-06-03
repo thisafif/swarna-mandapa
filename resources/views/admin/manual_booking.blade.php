@@ -462,11 +462,25 @@
                 <div class="row row-form">
                     <div class="col-md-6 mb-3 mb-md-0">
                         <label class="form-label">Check-in Date</label>
-                        <input type="date" class="form-control" name="check_in" value="{{ old('check_in') }}" required>
+                        <div class="cal-wrap" id="wrap-ci">
+                            <div class="cal-trigger" id="trigger-ci" onclick="openCal('ci')">
+                                <i class="bi bi-calendar3 text-gold" style="font-size:.85rem"></i>
+                                <span class="cal-placeholder" id="display-ci">dd/mm/yyyy</span>
+                            </div>
+                            <div class="cal-popup" id="popup-ci"></div>
+                        </div>
+                        <div class="invalid-hint" id="hint-ci">Please select check-in date</div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Check-out Date</label>
-                        <input type="date" class="form-control" name="check_out" value="{{ old('check_out') }}" required>
+                        <div class="cal-wrap" id="wrap-co">
+                            <div class="cal-trigger" id="trigger-co" onclick="openCal('co')">
+                                <i class="bi bi-calendar3 text-gold" style="font-size:.85rem"></i>
+                                <span class="cal-placeholder" id="display-co">dd/mm/yyyy</span>
+                            </div>
+                            <div class="cal-popup" id="popup-co"></div>
+                        </div>
+                        <div class="invalid-hint" id="hint-co">Please select check-out date</div>
                     </div>
                 </div>
 
@@ -507,311 +521,21 @@
         </form>
     </div>
 
-    <script>
-    const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-    const DAYS   = ["SU","MO","TU","WE","TH","FR","SA"];
-
-    let unavailDates = {};
-    let calState = {
-        which: null,
-        year:  new Date().getFullYear(),
-        month: new Date().getMonth(),
-        selectedCI: null,
-        selectedCO: null
-    };
-
-    const fmtDisplay = s => {
-        if (!s) return 'dd/mm/yyyy';
-        const [y, m, dd] = s.split('-');
-        return `${dd}/${m}/${y}`;
-    };
-
-    async function loadUnavailableDates() {
-        try {
-            const resp = await fetch('/api/unavailable-dates');
-            if (!resp.ok) throw new Error(`API ${resp.status}`);
-            unavailDates = await resp.json();
-        } catch (e) {
-            console.error('Error loading dates:', e);
-        }
-    }
-
-    function openCal(which, e) {
-        if (e) e.stopPropagation();
-
-        const popup     = document.getElementById('popup-' + which);
-        const isAlready = popup.classList.contains('show');
-
-        // Tutup semua dulu
-        closeCals();
-
-        if (isAlready) return; // toggle: klik lagi = tutup
-
-        calState.which = which;
-
-        let ref = new Date();
-        if (which === 'ci') {
-            if (calState.selectedCI) ref = new Date(calState.selectedCI + 'T00:00:00');
-        } else {
-            if (calState.selectedCO) {
-                ref = new Date(calState.selectedCO + 'T00:00:00');
-            } else if (calState.selectedCI) {
-                ref = new Date(calState.selectedCI + 'T00:00:00');
-                ref.setDate(ref.getDate() + 1);
-            }
-        }
-        calState.year  = ref.getFullYear();
-        calState.month = ref.getMonth();
-
-        renderCal(which);
-        popup.classList.add('show');
-        document.getElementById('trigger-' + which).classList.add('open');
-    }
-
-    function closeCals() {
-        ['ci','co'].forEach(w => {
-            document.getElementById('popup-' + w).classList.remove('show');
-            document.getElementById('trigger-' + w).classList.remove('open');
-        });
-        calState.which = null;
-    }
-
-    function renderCal(which) {
-        const popup  = document.getElementById('popup-' + which);
-        const today  = new Date(); today.setHours(0,0,0,0);
-        const y      = calState.year;
-        const m      = calState.month;
-        const first  = new Date(y, m, 1).getDay();
-        const total  = new Date(y, m + 1, 0).getDate();
-        const prevTotal = new Date(y, m, 0).getDate();
-
-        const minDate = (which === 'co' && calState.selectedCI)
-            ? (() => { const d = new Date(calState.selectedCI + 'T00:00:00'); d.setDate(d.getDate()+1); return d; })()
-            : today;
-
-        popup.innerHTML = '';
-
-        // ── Header ──
-        const header = document.createElement('div');
-        header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem';
-
-        const btnStyle = 'background:none;border:1.5px solid #ddd;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;color:#666;transition:all .2s;flex-shrink:0';
-
-        const btnPrev = document.createElement('button');
-        btnPrev.type = 'button';
-        btnPrev.innerHTML = '&#8249;';
-        btnPrev.style.cssText = btnStyle;
-        btnPrev.addEventListener('mouseenter', () => { btnPrev.style.borderColor='#b8924a'; btnPrev.style.color='#b8924a'; });
-        btnPrev.addEventListener('mouseleave', () => { btnPrev.style.borderColor='#ddd'; btnPrev.style.color='#666'; });
-        btnPrev.addEventListener('click', function(e) {
-            e.stopPropagation();
-            calState.month--;
-            if (calState.month < 0) { calState.month = 11; calState.year--; }
-            renderCal(which);
-        });
-
-        const btnNext = document.createElement('button');
-        btnNext.type = 'button';
-        btnNext.innerHTML = '&#8250;';
-        btnNext.style.cssText = btnStyle;
-        btnNext.addEventListener('mouseenter', () => { btnNext.style.borderColor='#b8924a'; btnNext.style.color='#b8924a'; });
-        btnNext.addEventListener('mouseleave', () => { btnNext.style.borderColor='#ddd'; btnNext.style.color='#666'; });
-        btnNext.addEventListener('click', function(e) {
-            e.stopPropagation();
-            calState.month++;
-            if (calState.month > 11) { calState.month = 0; calState.year++; }
-            renderCal(which);
-        });
-
-        const monthLabel = document.createElement('div');
-        monthLabel.style.cssText = "font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:600;color:#3a3028";
-        monthLabel.textContent = MONTHS[m] + ' ' + y;
-
-        header.appendChild(btnPrev);
-        header.appendChild(monthLabel);
-        header.appendChild(btnNext);
-        popup.appendChild(header);
-
-        // ── Grid ──
-        const grid = document.createElement('div');
-        grid.style.cssText = 'display:grid;grid-template-columns:repeat(7,1fr);gap:2px';
-
-        DAYS.forEach(d => {
-            const el = document.createElement('div');
-            el.style.cssText = 'text-align:center;font-size:.65rem;font-weight:600;color:#aaa;padding:.25rem 0';
-            el.textContent = d;
-            grid.appendChild(el);
-        });
-
-        // Trailing bulan sebelumnya
-        for (let i = first - 1; i >= 0; i--) {
-            const el = document.createElement('div');
-            el.style.cssText = 'text-align:center;padding:.35rem .1rem;font-size:.82rem;opacity:.2;line-height:1.6';
-            el.textContent = prevTotal - i;
-            grid.appendChild(el);
-        }
-
-        // Hari bulan ini
-        for (let day = 1; day <= total; day++) {
-            const mm      = String(m + 1).padStart(2, '0');
-            const dd      = String(day).padStart(2, '0');
-            const dateStr = `${y}-${mm}-${dd}`;
-            const dateObj = new Date(y, m, day);
-
-            const isPast    = dateObj < minDate;
-            const uStatus   = unavailDates[dateStr];
-            const isBooked  = uStatus === 'CONFIRMED';
-            const isPending = uStatus === 'PENDING';
-            const isSelCI   = dateStr === calState.selectedCI;
-            const isSelCO   = dateStr === calState.selectedCO;
-            const inRange   = calState.selectedCI && calState.selectedCO
-                              && dateStr > calState.selectedCI && dateStr < calState.selectedCO;
-            const isToday   = dateObj.getTime() === today.getTime();
-
-            const el = document.createElement('div');
-            el.style.cssText = 'text-align:center;padding:.35rem .1rem;font-size:.82rem;border-radius:6px;line-height:1.6;transition:background .15s;position:relative';
-            el.textContent = day;
-
-            if (isSelCI || isSelCO) {
-                el.style.background = '#b8924a';
-                el.style.color      = '#fff';
-                el.style.fontWeight = '600';
-                el.style.cursor     = 'pointer';
-                // Klik lagi untuk deselect / ganti
-                el.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    pickDate(dateStr, which);
-                });
-            } else if (inRange) {
-                el.style.background = '#f5ecd9';
-                el.style.color      = '#b8924a';
-                el.style.cursor     = 'pointer';
-                el.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    pickDate(dateStr, which);
-                });
-            } else if (isBooked || isPending) {
-                el.style.background    = isBooked ? '#fee2e2' : '#fef9c3';
-                el.style.color         = isBooked ? '#ef4444' : '#ca8a04';
-                el.style.fontWeight    = '600';
-                el.style.cursor        = 'not-allowed';
-                el.style.pointerEvents = 'none';
-                const dot = document.createElement('div');
-                dot.style.cssText = `position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:${isBooked ? '#ef4444' : '#eab308'}`;
-                el.appendChild(dot);
-            } else if (isPast) {
-                el.style.color  = '#ccc';
-                el.style.cursor = 'default';
-            } else {
-                el.style.cursor = 'pointer';
-                if (isToday) {
-                    el.style.fontWeight = '700';
-                    el.style.border     = '1.5px solid #b8924a';
-                    el.style.color      = '#b8924a';
-                } else {
-                    el.style.color = '#3a3028';
-                }
-                el.addEventListener('mouseenter', () => {
-                    el.style.background = '#f5ecd9';
-                    el.style.color      = '#b8924a';
-                });
-                el.addEventListener('mouseleave', () => {
-                    el.style.background = 'transparent';
-                    el.style.color      = isToday ? '#b8924a' : '#3a3028';
-                });
-                el.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    pickDate(dateStr, which);
-                });
-            }
-
-            grid.appendChild(el);
-        }
-
-        // Trailing bulan berikutnya
-        const filled    = first + total;
-        const remainder = filled % 7 === 0 ? 0 : 7 - (filled % 7);
-        for (let i = 1; i <= remainder; i++) {
-            const el = document.createElement('div');
-            el.style.cssText = 'text-align:center;padding:.35rem .1rem;font-size:.82rem;opacity:.2;line-height:1.6';
-            el.textContent = i;
-            grid.appendChild(el);
-        }
-
-        popup.appendChild(grid);
-
-        // ── Legend ──
-        const legend = document.createElement('div');
-        legend.style.cssText = 'display:flex;gap:.75rem;margin-top:.75rem;padding-top:.75rem;border-top:1px solid #eee;flex-wrap:wrap';
-        [
-            { bg:'#fee2e2', border:'#ef4444', label:'Fully Booked' },
-            { bg:'#fef9c3', border:'#eab308', label:'Pending'      },
-            { bg:'#b8924a', border:'',        label:'Selected'     },
-        ].forEach(li => {
-            const item = document.createElement('div');
-            item.style.cssText = 'display:flex;align-items:center;gap:.35rem;font-size:.7rem;color:#999';
-            const dot = document.createElement('div');
-            dot.style.cssText = `width:10px;height:10px;border-radius:3px;background:${li.bg};flex-shrink:0${li.border ? ';border:1.5px solid '+li.border : ''}`;
-            item.appendChild(dot);
-            item.appendChild(document.createTextNode(li.label));
-            legend.appendChild(item);
-        });
-        popup.appendChild(legend);
-    }
-
-    function pickDate(dateStr, which) {
-        if (which === 'ci') {
-            calState.selectedCI = dateStr;
-
-            if (calState.selectedCO && calState.selectedCO <= dateStr) {
-                calState.selectedCO = null;
-                document.getElementById('check_out').value = '';
-                const trigCO = document.getElementById('trigger-co');
-                trigCO.innerHTML = `<i class="bi bi-calendar3" style="font-size:.85rem;color:var(--brand-gold);"></i><span class="cal-placeholder">Select date</span>`;
-                trigCO.onclick = (e) => openCal('co', e);
-            }
-        } else {
-            calState.selectedCO = dateStr;
-        }
-
-        document.getElementById(which === 'ci' ? 'check_in' : 'check_out').value = dateStr;
-
-        const trigger = document.getElementById('trigger-' + which);
-        trigger.innerHTML = `<i class="bi bi-calendar3" style="font-size:.85rem;color:var(--brand-gold);"></i><span class="cal-val">${fmtDisplay(dateStr)}</span>`;
-        // Pasang ulang onclick karena innerHTML diganti
-        trigger.onclick = (e) => openCal(which, e);
-
-        renderCal(which);
-    }
-
-    // Tutup kalender kalau klik di luar
-    document.addEventListener('click', function(e) {
-        if (!e.target.closest('.cal-wrap')) {
-            closeCals();
-        }
-    });
-
-    // Cegah popup menutup diri sendiri
-    document.querySelectorAll('.cal-popup').forEach(p => {
-        p.addEventListener('click', e => e.stopPropagation());
-    });
-
-    document.addEventListener('DOMContentLoaded', async function() {
-        // Pasang onclick awal
-        document.getElementById('trigger-ci').onclick = (e) => openCal('ci', e);
-        document.getElementById('trigger-co').onclick = (e) => openCal('co', e);
-
-        await loadUnavailableDates();
-    });
-</script>
+    
 
 @endsection
 
 @push('scripts')
 <script>
-/* Minimal calendar engine (adapted from public booking) */
 let unavailDates = {};
-let calState = { which: null, year: new Date().getFullYear(), month: new Date().getMonth(), selectedCI: null, selectedCO: null };
+let calState = {
+    which: null,
+    year:  new Date().getFullYear(),
+    month: new Date().getMonth(),
+    selectedCI: null,
+    selectedCO: null,
+};
+
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAYS   = ['Su','Mo','Tu','We','Th','Fr','Sa'];
 
@@ -824,93 +548,328 @@ function openCal(which) {
     }
 
     const popup = document.getElementById('popup-' + which);
-    if (popup.classList.contains('show') && calState.which === which) { closeCals(); return; }
-    if (popup.parentElement !== document.body) document.body.appendChild(popup);
+
+    if (popup.classList.contains('show') && calState.which === which) {
+        closeCals();
+        return;
+    }
+
+    if (popup.parentElement !== document.body) {
+        document.body.appendChild(popup);
+    }
 
     calState.which = which;
+
     let ref = new Date();
     if (which === 'ci') {
         if (calState.selectedCI) ref = new Date(calState.selectedCI + 'T00:00:00');
     } else {
-        if (calState.selectedCO) ref = new Date(calState.selectedCO + 'T00:00:00');
-        else if (calState.selectedCI) { ref = new Date(calState.selectedCI + 'T00:00:00'); ref.setDate(ref.getDate() + 1); }
+        if (calState.selectedCO) {
+            ref = new Date(calState.selectedCO + 'T00:00:00');
+        } else if (calState.selectedCI) {
+            ref = new Date(calState.selectedCI + 'T00:00:00');
+            ref.setDate(ref.getDate() + 1);
+        }
     }
-    calState.year  = ref.getFullYear(); calState.month = ref.getMonth();
-    renderCal(which); positionPopup(which); popup.classList.add('show'); document.getElementById('trigger-' + which).classList.add('open');
+    calState.year  = ref.getFullYear();
+    calState.month = ref.getMonth();
+
+    renderCal(which);
+    positionPopup(which);
+    popup.classList.add('show');
+    document.getElementById('trigger-' + which).classList.add('open');
 
     fetch('/api/unavailable-dates?t=' + Date.now(), { cache: 'no-store' })
         .then(r => r.ok ? r.json() : null)
-        .then(data => { if (!data) return; unavailDates = data; if (calState.which === which) renderCal(which); })
-        .catch(()=>{});
+        .then(data => {
+            if (!data) return;
+            if (JSON.stringify(unavailDates) !== JSON.stringify(data)) {
+                unavailDates = data;
+                if (calState.which === which) renderCal(which);
+            }
+        })
+        .catch(() => {});
 }
 
 function positionPopup(which) {
-    const trigger = document.getElementById('trigger-' + which); const popup = document.getElementById('popup-' + which); const rect = trigger.getBoundingClientRect();
-    popup.style.visibility = 'hidden'; popup.style.display = 'block'; popup.style.position = 'fixed'; popup.style.left = rect.left + 'px'; popup.style.top = (rect.bottom + 6) + 'px';
+    const trigger = document.getElementById('trigger-' + which);
+    const popup   = document.getElementById('popup-' + which);
+    const rect    = trigger.getBoundingClientRect();
+
+    popup.style.visibility = 'hidden';
+    popup.style.display    = 'block';
+    popup.style.position   = 'fixed';
+    popup.style.left       = rect.left + 'px';
+    popup.style.top        = (rect.bottom + 6) + 'px';
+
     requestAnimationFrame(() => {
-        const pw = popup.offsetWidth; const ph = popup.offsetHeight; let left = rect.left; let top = rect.bottom + 6;
-        if (left + pw > window.innerWidth - 10) left = Math.max(10, window.innerWidth - pw - 10);
-        if (top + ph > window.innerHeight - 10) { top = rect.top - ph - 6; if (top < 10) top = 10; }
-        popup.style.left = left + 'px'; popup.style.top = top + 'px'; popup.style.visibility = 'visible'; popup.style.display = '';
+        const pw = popup.offsetWidth;
+        const ph = popup.offsetHeight;
+
+        let left = rect.left;
+        let top  = rect.bottom + 6;
+
+        if (left + pw > window.innerWidth - 10) {
+            left = Math.max(10, window.innerWidth - pw - 10);
+        }
+        if (top + ph > window.innerHeight - 10) {
+            top = rect.top - ph - 6;
+            if (top < 10) top = 10;
+        }
+
+        popup.style.left       = left + 'px';
+        popup.style.top        = top  + 'px';
+        popup.style.visibility = 'visible';
+        popup.style.display    = '';
     });
 }
 
-function closeCals() { ['ci','co'].forEach(w=>{ const p = document.getElementById('popup-'+w); if(p) p.classList.remove('show'); const t = document.getElementById('trigger-'+w); if(t) t.classList.remove('open'); }); calState.which = null; }
+function closeCals() {
+    ['ci','co'].forEach(w => {
+        const p = document.getElementById('popup-' + w);
+        if (p) p.classList.remove('show');
+        const t = document.getElementById('trigger-' + w);
+        if (t) t.classList.remove('open');
+    });
+    calState.which = null;
+}
 
 function renderCal(which) {
-    const popup = document.getElementById('popup-' + which); const today = new Date(); today.setHours(0,0,0,0);
-    const y = calState.year; const m = calState.month; const first = new Date(y, m, 1).getDay(); const total = new Date(y, m + 1, 0).getDate(); const prevTotal = new Date(y, m, 0).getDate();
-    const minDate = (which === 'co' && calState.selectedCI) ? (()=>{ const d=new Date(calState.selectedCI+'T00:00:00'); d.setDate(d.getDate()+2); return d; })() : today;
+    const popup  = document.getElementById('popup-' + which);
+    const today  = new Date(); today.setHours(0,0,0,0);
+    const y      = calState.year;
+    const m      = calState.month;
+    const first  = new Date(y, m, 1).getDay();
+    const total  = new Date(y, m + 1, 0).getDate();
+    const prevTotal = new Date(y, m, 0).getDate();
+
+    const minDate = (which === 'co' && calState.selectedCI)
+        ? (() => { const d = new Date(calState.selectedCI + 'T00:00:00'); d.setDate(d.getDate()+2); return d; })()
+        : today;
+
     popup.innerHTML = '';
-    // header
-    const header = document.createElement('div'); header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem';
-    const btnPrev = document.createElement('button'); btnPrev.type='button'; btnPrev.innerHTML='&#8249;'; btnPrev.style.cssText='background:none;border:1.5px solid #ddd;border-radius:50%;width:32px;height:32px;cursor:pointer'; btnPrev.addEventListener('click', function(e){ e.stopPropagation(); calState.month--; if(calState.month<0){calState.month=11;calState.year--;} renderCal(which); });
-    const btnNext = document.createElement('button'); btnNext.type='button'; btnNext.innerHTML='&#8250;'; btnNext.style.cssText=btnPrev.style.cssText; btnNext.addEventListener('click', function(e){ e.stopPropagation(); calState.month++; if(calState.month>11){calState.month=0;calState.year++;} renderCal(which); });
-    const monthLabel = document.createElement('div'); monthLabel.style.cssText = "font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:600;color:#3a3028"; monthLabel.textContent = MONTHS[m] + ' ' + y;
-    header.appendChild(btnPrev); header.appendChild(monthLabel); header.appendChild(btnNext); popup.appendChild(header);
 
-    const grid = document.createElement('div'); grid.style.cssText = 'display:grid;grid-template-columns:repeat(7,1fr);gap:2px;min-width:280px'; DAYS.forEach(d=>{ const el=document.createElement('div'); el.style.cssText='text-align:center;font-size:.65rem;font-weight:600;color:#aaa;padding:.25rem 0;text-transform:uppercase'; el.textContent=d; grid.appendChild(el); });
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem';
 
-    for (let i = first - 1; i >= 0; i--) { const el=document.createElement('div'); el.style.cssText='text-align:center;padding:.35rem .1rem;font-size:.82rem;opacity:.2;line-height:1.6'; el.textContent=prevTotal - i; grid.appendChild(el); }
+    const btnPrev = document.createElement('button');
+    btnPrev.type      = 'button';
+    btnPrev.innerHTML = '&#8249;';
+    btnPrev.style.cssText = 'background:none;border:1.5px solid #ddd;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:1.1rem;line-height:1;display:flex;align-items:center;justify-content:center;color:#666;transition:all .2s';
+    btnPrev.onmouseenter = () => { btnPrev.style.borderColor='#b8924a'; btnPrev.style.color='#b8924a'; };
+    btnPrev.onmouseleave = () => { btnPrev.style.borderColor='#ddd';    btnPrev.style.color='#666'; };
+    btnPrev.addEventListener('click', function(e) {
+        e.stopPropagation();
+        calState.month--;
+        if (calState.month < 0) { calState.month = 11; calState.year--; }
+        renderCal(which);
+    });
 
-    for (let day=1; day<=total; day++) {
-        const mm = String(m+1).padStart(2,'0'); const dd = String(day).padStart(2,'0'); const dateStr = `${y}-${mm}-${dd}`; const dateObj = new Date(y,m,day);
-        const isPast = dateObj < minDate; const uStatus = unavailDates[dateStr]; const isBooked = uStatus === 'CONFIRMED'; const isPending = uStatus === 'PENDING';
-        const isSelCI = dateStr === calState.selectedCI; const isSelCO = dateStr === calState.selectedCO; const inRange = calState.selectedCI && calState.selectedCO && dateStr > calState.selectedCI && dateStr < calState.selectedCO; const isToday = dateObj.getTime() === today.getTime();
-        const el = document.createElement('div'); el.style.cssText = `text-align:center;padding:.35rem .1rem;font-size:.82rem;border-radius:6px;line-height:1.6;transition:background .15s;position:relative`; el.textContent = day;
-        if (isSelCI || isSelCO) { el.style.background='#b8924a'; el.style.color='#fff'; el.style.fontWeight='600'; el.style.cursor='pointer'; }
-        else if (inRange) { el.style.background='#f5ecd9'; el.style.color='#b8924a'; el.style.cursor='pointer'; }
-        else if (isBooked) { el.style.background='#fee2e2'; el.style.color='#ef4444'; el.style.fontWeight='600'; el.style.cursor='not-allowed'; const dot=document.createElement('span'); dot.style.cssText='position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:#ef4444;display:block'; el.appendChild(dot); }
-        else if (isPending) { el.style.background='#fef9c3'; el.style.color='#ca8a04'; el.style.fontWeight='600'; el.style.cursor='not-allowed'; const dot=document.createElement('span'); dot.style.cssText='position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:#eab308;display:block'; el.appendChild(dot); }
-        else if (isPast) { el.style.color='#ccc'; el.style.cursor='default'; }
-        else { el.style.cursor='pointer'; if (isToday) { el.style.fontWeight='700'; el.style.border='1.5px solid #b8924a'; el.style.color='#b8924a'; } else { el.style.color='#3a3028'; } el.addEventListener('mouseenter', ()=>{ el.style.background='#f5ecd9'; el.style.color='#b8924a'; }); el.addEventListener('mouseleave', ()=>{ el.style.background='transparent'; el.style.color = isToday ? '#b8924a' : '#3a3028'; }); el.addEventListener('click', function(e){ e.stopPropagation(); pickDate(dateStr, which); }); }
+    const btnNext = document.createElement('button');
+    btnNext.type      = 'button';
+    btnNext.innerHTML = '&#8250;';
+    btnNext.style.cssText = btnPrev.style.cssText;
+    btnNext.onmouseenter = () => { btnNext.style.borderColor='#b8924a'; btnNext.style.color='#b8924a'; };
+    btnNext.onmouseleave = () => { btnNext.style.borderColor='#ddd';    btnNext.style.color='#666'; };
+    btnNext.addEventListener('click', function(e) {
+        e.stopPropagation();
+        calState.month++;
+        if (calState.month > 11) { calState.month = 0; calState.year++; }
+        renderCal(which);
+    });
+
+    const monthLabel = document.createElement('div');
+    monthLabel.style.cssText = "font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:600;color:#3a3028";
+    monthLabel.textContent   = MONTHS[m] + ' ' + y;
+
+    header.appendChild(btnPrev);
+    header.appendChild(monthLabel);
+    header.appendChild(btnNext);
+    popup.appendChild(header);
+
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(7,1fr);gap:2px;min-width:280px';
+
+    DAYS.forEach(d => {
+        const el = document.createElement('div');
+        el.style.cssText = 'text-align:center;font-size:.65rem;font-weight:600;color:#aaa;padding:.25rem 0;text-transform:uppercase';
+        el.textContent = d;
+        grid.appendChild(el);
+    });
+
+    for (let i = first - 1; i >= 0; i--) {
+        const el = document.createElement('div');
+        el.style.cssText = 'text-align:center;padding:.35rem .1rem;font-size:.82rem;opacity:.2;line-height:1.6';
+        el.textContent = prevTotal - i;
         grid.appendChild(el);
     }
 
-    const filled = first + total; const remainder = filled % 7 === 0 ? 0 : 7 - (filled % 7); for (let i=1;i<=remainder;i++){ const el=document.createElement('div'); el.style.cssText='text-align:center;padding:.35rem .1rem;font-size:.82rem;opacity:.2;line-height:1.6'; el.textContent=i; grid.appendChild(el); }
+    for (let day = 1; day <= total; day++) {
+        const mm      = String(m + 1).padStart(2, '0');
+        const dd      = String(day).padStart(2, '0');
+        const dateStr = `${y}-${mm}-${dd}`;
+        const dateObj = new Date(y, m, day);
+
+        const isPast    = dateObj < minDate;
+        const uStatus   = unavailDates[dateStr];
+        const isBooked  = uStatus === 'CONFIRMED';
+        const isPending = uStatus === 'PENDING';
+        const isSelCI   = dateStr === calState.selectedCI;
+        const isSelCO   = dateStr === calState.selectedCO;
+        const inRange   = calState.selectedCI && calState.selectedCO
+                          && dateStr > calState.selectedCI && dateStr < calState.selectedCO;
+        const isToday   = dateObj.getTime() === today.getTime();
+
+        const el = document.createElement('div');
+        el.style.cssText = `text-align:center;padding:.35rem .1rem;font-size:.82rem;border-radius:6px;line-height:1.6;transition:background .15s;position:relative`;
+        el.textContent = day;
+
+        if (isSelCI || isSelCO) {
+            el.style.background = '#b8924a';
+            el.style.color      = '#fff';
+            el.style.fontWeight = '600';
+            el.style.cursor     = 'pointer';
+        } else if (inRange) {
+            el.style.background = '#f5ecd9';
+            el.style.color      = '#b8924a';
+            el.style.cursor     = 'pointer';
+        } else if (isBooked) {
+            el.style.background = '#fee2e2';
+            el.style.color      = '#ef4444';
+            el.style.fontWeight = '600';
+            el.style.cursor     = 'not-allowed';
+            const dot = document.createElement('span');
+            dot.style.cssText = 'position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:#ef4444;display:block';
+            el.appendChild(dot);
+        } else if (isPending) {
+            el.style.background = '#fef9c3';
+            el.style.color      = '#ca8a04';
+            el.style.fontWeight = '600';
+            el.style.cursor     = 'not-allowed';
+            const dot = document.createElement('span');
+            dot.style.cssText = 'position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:#eab308;display:block';
+            el.appendChild(dot);
+        } else if (isPast) {
+            el.style.color  = '#ccc';
+            el.style.cursor = 'default';
+        } else {
+            el.style.cursor = 'pointer';
+            if (isToday) {
+                el.style.fontWeight = '700';
+                el.style.border     = '1.5px solid #b8924a';
+                el.style.color      = '#b8924a';
+            } else {
+                el.style.color = '#3a3028';
+            }
+            el.addEventListener('mouseenter', () => {
+                el.style.background = '#f5ecd9';
+                el.style.color      = '#b8924a';
+            });
+            el.addEventListener('mouseleave', () => {
+                el.style.background = 'transparent';
+                el.style.color      = isToday ? '#b8924a' : '#3a3028';
+            });
+            el.addEventListener('click', function(e) {
+                e.stopPropagation();
+                pickDate(dateStr, which);
+            });
+        }
+
+        grid.appendChild(el);
+    }
+
+    const filled    = first + total;
+    const remainder = filled % 7 === 0 ? 0 : 7 - (filled % 7);
+    for (let i = 1; i <= remainder; i++) {
+        const el = document.createElement('div');
+        el.style.cssText = 'text-align:center;padding:.35rem .1rem;font-size:.82rem;opacity:.2;line-height:1.6';
+        el.textContent = i;
+        grid.appendChild(el);
+    }
+
     popup.appendChild(grid);
 
-    // legend
-    const legend = document.createElement('div'); legend.style.cssText='display:flex;gap:.75rem;margin-top:.75rem;padding-top:.75rem;border-top:1px solid #eee;flex-wrap:wrap'; const legendItems=[{bg:'#fee2e2',label:'Fully Booked'},{bg:'#fef9c3',label:'Pending'},{bg:'#b8924a',label:'Selected'}]; legendItems.forEach(li=>{ const item=document.createElement('div'); item.style.cssText='display:flex;align-items:center;gap:.35rem;font-size:.7rem;color:#999'; const dot=document.createElement('div'); dot.style.cssText=`width:10px;height:10px;border-radius:3px;background:${li.bg};flex-shrink:0`; item.appendChild(dot); item.appendChild(document.createTextNode(li.label)); legend.appendChild(item); }); popup.appendChild(legend);
+    const legend = document.createElement('div');
+    legend.style.cssText = 'display:flex;gap:.75rem;margin-top:.75rem;padding-top:.75rem;border-top:1px solid #eee;flex-wrap:wrap';
+    const legendItems = [
+        { bg:'#fee2e2', border:'#ef4444', label:'Fully Booked' },
+        { bg:'#fef9c3', border:'#eab308', label:'Pending'      },
+        { bg:'#b8924a', border:'',        label:'Selected'     },
+    ];
+    legendItems.forEach(li => {
+        const item = document.createElement('div');
+        item.style.cssText = 'display:flex;align-items:center;gap:.35rem;font-size:.7rem;color:#999';
+        const dot  = document.createElement('div');
+        dot.style.cssText = `width:10px;height:10px;border-radius:3px;background:${li.bg};flex-shrink:0${li.border ? ';border:1.5px solid '+li.border : ''}`;
+        item.appendChild(dot);
+        item.appendChild(document.createTextNode(li.label));
+        legend.appendChild(item);
+    });
+    popup.appendChild(legend);
 }
 
 function pickDate(dateStr, which) {
     if (which === 'ci') {
         calState.selectedCI = dateStr;
-        if (calState.selectedCO && calState.selectedCO <= dateStr) { calState.selectedCO = null; document.getElementById('check_out').value = ''; const dco = document.getElementById('display-co'); dco.textContent = 'dd/mm/yyyy'; dco.className = 'cal-placeholder'; }
-        document.getElementById('check_in').value = dateStr; const dci = document.getElementById('display-ci'); dci.textContent = fmtDisplay(dateStr); dci.className = 'cal-val'; document.getElementById('hint-ci').style.display='none'; document.getElementById('trigger-ci').style.borderColor=''; closeCals(); setTimeout(()=>openCal('co'),150);
+
+        if (calState.selectedCO && calState.selectedCO <= dateStr) {
+            calState.selectedCO = null;
+            document.getElementById('check_out').value = '';
+            const dco = document.getElementById('display-co');
+            dco.textContent  = 'dd/mm/yyyy';
+            dco.className    = 'cal-placeholder';
+        }
+
+        document.getElementById('check_in').value = dateStr;
+        const dci = document.getElementById('display-ci');
+        dci.textContent = fmtDisplay(dateStr);
+        dci.className   = 'cal-val';
+
+        document.getElementById('hint-ci').style.display = 'none';
+        document.getElementById('trigger-ci').style.borderColor = '';
+
+        closeCals();
+        setTimeout(() => openCal('co'), 150);
+
     } else {
-        calState.selectedCO = dateStr; document.getElementById('check_out').value = dateStr; const dco = document.getElementById('display-co'); dco.textContent = fmtDisplay(dateStr); dco.className = 'cal-val'; document.getElementById('hint-co').style.display='none'; document.getElementById('trigger-co').style.borderColor=''; closeCals();
+        calState.selectedCO = dateStr;
+        document.getElementById('check_out').value = dateStr;
+        const dco = document.getElementById('display-co');
+        dco.textContent = fmtDisplay(dateStr);
+        dco.className   = 'cal-val';
+
+        document.getElementById('hint-co').style.display = 'none';
+        document.getElementById('trigger-co').style.borderColor = '';
+
+        closeCals();
     }
 }
 
-document.addEventListener('click', function(e){ if (!e.target.closest('.cal-wrap') && !e.target.closest('.cal-popup')) closeCals(); });
-document.addEventListener('wheel', function(e){ if (calState.which) { const popup = document.getElementById('popup-' + calState.which); if (popup && popup.classList.contains('show') && !popup.contains(e.target)) { e.preventDefault(); } } }, { passive: false });
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.cal-wrap') && !e.target.closest('.cal-popup')) {
+        closeCals();
+    }
+});
+
+document.addEventListener('wheel', function(e) {
+    if (calState.which) {
+        const popup = document.getElementById('popup-' + calState.which);
+        if (popup && popup.classList.contains('show') && !popup.contains(e.target)) {
+            e.preventDefault();
+        }
+    }
+}, { passive: false });
 
 fetch('/api/unavailable-dates?t=' + Date.now(), { cache: 'no-store' })
-    .then(r => r.ok ? r.json() : Promise.reject())
-    .then(data => { unavailDates = data; if (calState.which) renderCal(calState.which); })
-    .catch(()=>{ unavailDates = {}; });
+    .then(r => {
+        if (!r.ok) throw new Error(`API ${r.status}`);
+        return r.json();
+    })
+    .then(data => {
+        unavailDates = data;
+        if (calState.which) renderCal(calState.which);
+    })
+    .catch(() => { unavailDates = {}; });
 
 function fmtDisplay(dateStr) { const d = new Date(dateStr + 'T00:00:00'); return ('0'+d.getDate()).slice(-2) + '/' + ('0'+(d.getMonth()+1)).slice(-2) + '/' + d.getFullYear(); }
 
