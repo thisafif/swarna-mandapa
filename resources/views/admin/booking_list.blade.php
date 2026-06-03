@@ -370,20 +370,20 @@
 
     <div class="table-card">
         <!-- Toolbar -->
-        <div class="table-toolbar">
+        <form method="GET" action="{{ route('admin.booking_list') }}" class="table-toolbar">
             <div class="search-box">
                 <i class="bi bi-search"></i>
-                <input type="text" class="search-input" placeholder="Search by guest name or code">
+                <input type="text" name="q" value="{{ request()->query('q') }}" class="search-input" placeholder="Search by guest name or code" onkeypress="if(event.key === 'Enter'){ this.form.submit(); }">
             </div>
             <div class="filter-box">
-                <select class="filter-select">
+                <select name="status" class="filter-select" onchange="this.form.submit()">
                     <option value="">Filter by Status</option>
-                    <option value="confirmed">Confirmed</option>
-                    <option value="pending">Pending</option>
-                    <option value="declined">Declined</option>
+                    <option value="confirmed" {{ request()->query('status') === 'confirmed' ? 'selected' : '' }}>Confirmed</option>
+                    <option value="pending" {{ request()->query('status') === 'pending' ? 'selected' : '' }}>Pending</option>
+                    <option value="declined" {{ request()->query('status') === 'declined' ? 'selected' : '' }}>Declined</option>
                 </select>
             </div>
-        </div>
+        </form>
 
         <!-- Table -->
         <div class="table-responsive">
