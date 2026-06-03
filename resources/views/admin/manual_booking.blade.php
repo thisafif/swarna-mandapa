@@ -210,7 +210,7 @@
 .cal-trigger .cal-val{font-size:.88rem;color:var(--text-dark);font-weight:500}
 .cal-trigger .cal-placeholder{font-size:.88rem;color:var(--text-muted)}
 
-.cal-popup { position: fixed; z-index: 99999; background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: 0 8px 40px rgba(0,0,0,0.18); padding: 1rem; width: 320px; display: none; }
+.cal-popup { position: fixed; z-index: 999999; background: #ffffff; border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: 0 12px 40px rgba(0,0,0,0.18); padding: 1rem; width: 320px; display: none; }
 .cal-popup.show { display: block !important; }
 
 .cal-day{cursor:pointer}
