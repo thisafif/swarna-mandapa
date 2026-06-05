@@ -46,6 +46,8 @@
             display: flex;
             flex-direction: column;
             z-index: 1000;
+            overflow-y: auto; /* allow scrolling when content is taller than viewport */
+            -webkit-overflow-scrolling: touch;
         }
 
         .sidebar-brand {
@@ -67,7 +69,11 @@
         .sidebar-nav {
             padding: 2rem;
             flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: auto; /* ensure inner nav can scroll if needed */
         }
+        .sidebar-nav form { margin-top: auto; }
 
         .nav-section-title {
             font-size: 0.65rem;
@@ -112,7 +118,7 @@
         }
 
         .btn-logout {
-            margin-top: 3rem;
+            margin-top: 0;
             color: #DC3545;
         }
         
@@ -274,9 +280,10 @@
             <div class="nav-section-title mt-5">CONFIGURATION</div>
             <a href="{{ route('admin.villa_settings') }}" class="nav-link {{ request()->routeIs('admin.villa_settings') ? 'active' : '' }}"><i class="bi bi-gear"></i> Villa Settings</a>
 
-            <form action="{{ route('admin.logout') }}" method="POST" style="margin-top: 3rem;">
+            <form action="{{ route('admin.logout') }}" method="POST">
                 @csrf
                 <button type="submit" class="nav-link btn-logout w-100 text-start border-0 bg-transparent" onclick="return confirm('Yakin ingin logout?')"><i class="bi bi-box-arrow-right"></i> LOG OUT</button>
+            </form>
             </form>
         </nav>
     </aside>
