@@ -201,3 +201,11 @@ Route::get('/api/test-promo', function() {
         'sample'       => $promo,
     ]);
 });
+
+// Debug helper: clear booking session (only when app debug enabled)
+if (config('app.debug')) {
+    Route::get('/debug/clear-booking', function() {
+        session()->forget(['booking', 'booking_code', 'payment_order_id', 'payment_order_id']);
+        return response('Booking session cleared', 200);
+    });
+}
