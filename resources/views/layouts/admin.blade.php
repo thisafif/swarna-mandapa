@@ -280,10 +280,9 @@
             <div class="nav-section-title mt-5">CONFIGURATION</div>
             <a href="{{ route('admin.villa_settings') }}" class="nav-link {{ request()->routeIs('admin.villa_settings') ? 'active' : '' }}"><i class="bi bi-gear"></i> Villa Settings</a>
 
-            <form action="{{ route('admin.logout') }}" method="POST">
+            <form id="logoutForm" action="{{ route('admin.logout') }}" method="POST">
                 @csrf
-                <button type="submit" class="nav-link btn-logout w-100 text-start border-0 bg-transparent" onclick="return confirm('Yakin ingin logout?')"><i class="bi bi-box-arrow-right"></i> LOG OUT</button>
-            </form>
+                <button id="logoutBtn" type="button" class="nav-link btn-logout w-100 text-start border-0 bg-transparent"><i class="bi bi-box-arrow-right"></i> LOG OUT</button>
             </form>
         </nav>
     </aside>
@@ -310,6 +309,47 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <!-- Logout confirmation modal -->
+        <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        Are you sure you want to logout?
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button id="confirmLogoutBtn" type="button" class="btn btn-primary">Yes, logout</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                        var logoutBtn = document.getElementById('logoutBtn');
+                        var confirmBtn = document.getElementById('confirmLogoutBtn');
+                        var logoutForm = document.getElementById('logoutForm');
+                        var logoutModalEl = document.getElementById('logoutModal');
+                        var logoutModal = new bootstrap.Modal(logoutModalEl);
+
+                        if (logoutBtn) {
+                                logoutBtn.addEventListener('click', function(e) {
+                                        e.preventDefault();
+                                        logoutModal.show();
+                                });
+                        }
+
+                        if (confirmBtn) {
+                                confirmBtn.addEventListener('click', function() {
+                                        logoutForm.submit();
+                                });
+                        }
+                });
+        </script>
     @stack('scripts')
 </body>
 </html>
