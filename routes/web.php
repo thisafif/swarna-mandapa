@@ -5,6 +5,7 @@ use App\Http\Controllers\PromoController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\AdminAuthController;
 use App\Models\Booking;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ReviewController;
 
@@ -83,8 +84,34 @@ Route::middleware(['admin.auth'])->prefix('admin')->name('admin.')->group(functi
 
     Route::post('/manual-booking', [BookingController::class, 'storeManualBooking'])->name('manual_booking.submit');
 
-    Route::get('/booking-list', function () {
-        $bookings = Booking::orderByDesc('created_at')->get();
+    Route::get('/booking-list', function (Request $request) {
+        $q = $request->query('q');
+        $status = $request->query('status');
+
+        $query = Booking::query();
+
+        if ($q) {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('first_name', 'like', "%{$q}%")
+                    ->orWhere('last_name', 'like', "%{$q}%")
+                    ->orWhere('booking_code', 'like', "%{$q}%");
+            });
+        }
+
+        if ($status) {
+            $map = [
+                'pending' => 'PENDING',
+                'confirmed' => 'CONFIRMED',
+                'declined' => 'CANCELLED',
+            ];
+            $wanted = $map[strtolower($status)] ?? null;
+            if ($wanted) {
+                $query->where('status', $wanted);
+            }
+        }
+
+        $bookings = $query->orderByDesc('created_at')->get();
+
         return view('admin.booking_list', compact('bookings'));
     })->name('booking_list');
 

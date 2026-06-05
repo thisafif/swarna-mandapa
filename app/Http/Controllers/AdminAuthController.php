@@ -24,13 +24,12 @@ class AdminAuthController extends Controller
             'email' => 'required|email',
             'password' => 'required',
         ]);
-
-        // Gunakan model Admin untuk autentikasi
+        // Authenticate against admins table
         $admin = Admin::authenticate($request->input('email'), $request->input('password'));
-
         if ($admin) {
             session([
                 'admin_authenticated' => true,
+                'admin_id' => $admin->id,
                 'admin_email' => $admin->email,
                 'admin_name' => $admin->name,
             ]);

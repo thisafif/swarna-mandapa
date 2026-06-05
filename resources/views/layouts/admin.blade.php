@@ -149,6 +149,18 @@
             gap: 1.5rem;
         }
 
+        /* Mobile toggle styling */
+        .mobile-toggle {
+            font-size: 1.4rem;
+            color: var(--text-dark);
+            cursor: pointer;
+            margin-right: auto;
+            padding: 0.5rem;
+            border-radius: 6px;
+            display: none;
+        }
+        .mobile-toggle:active { background: rgba(0,0,0,0.03); }
+
         .notification-bell {
             font-size: 1.25rem;
             color: var(--text-dark);
@@ -225,6 +237,7 @@
 
         @media (max-width: 991px) {
             .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; }
+            .mobile-toggle { display: inline-flex; }
             .sidebar.show { transform: translateX(0); }
             .main-content { margin-left: 0; max-width: 100%; }
             .metrics-grid { grid-template-columns: repeat(2, 1fr); }
@@ -270,7 +283,7 @@
 
     <main class="main-content">
         <header class="top-header">
-            <i class="bi bi-list mobile-toggle d-none" onclick="document.querySelector('.sidebar').classList.toggle('show');"></i>
+            <i class="bi bi-list mobile-toggle d-lg-none" onclick="document.querySelector('.sidebar').classList.toggle('show');"></i>
             <div class="top-header-inner">
                 <i class="bi bi-bell notification-bell"></i>
                 <div class="header-divider"></div>
@@ -290,5 +303,6 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    @stack('scripts')
 </body>
 </html>

@@ -79,6 +79,205 @@
         box-shadow: 0 0 0 3px rgba(184, 146, 74, 0.1);
     }
 
+    /* ── Custom Calendar Styles ─────────────────────────────────── */
+    .cal-wrap {
+        position: relative;
+    }
+
+    .cal-trigger {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.75rem 1rem;
+        border: 1px solid #EBEBEB;
+        border-radius: 8px;
+        background: #FFFFFF;
+        cursor: pointer;
+        transition: all 0.2s;
+        min-height: 42px;
+        font-size: 0.9rem;
+        color: var(--text-dark);
+    }
+
+    .cal-trigger:hover,
+    .cal-trigger.open {
+        border-color: var(--brand-gold);
+        box-shadow: 0 0 0 3px rgba(184, 146, 74, 0.1);
+    }
+
+    .cal-popup {
+        position: absolute;
+        z-index: 9999;
+        background: #FFFFFF;
+        border: 1px solid #EBEBEB;
+        border-radius: 12px;
+        box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
+        padding: 1rem;
+        width: 320px;
+        display: none;
+        top: 100%;
+        left: 0;
+        margin-top: 0.5rem;
+    }
+
+    .cal-popup.show {
+        display: block !important;
+    }
+
+    .cal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+    }
+
+    .cal-nav {
+        background: none;
+        border: 1.5px solid #EBEBEB;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        color: #666;
+        transition: all 0.2s;
+        font-size: 1.1rem;
+    }
+
+    .cal-nav:hover {
+        border-color: var(--brand-gold);
+        color: var(--brand-gold);
+    }
+
+    .cal-month-label {
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: #3a3028;
+    }
+
+    .cal-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 2px;
+    }
+
+    .cal-dow {
+        text-align: center;
+        font-size: 0.65rem;
+        font-weight: 600;
+        color: #999;
+        text-transform: uppercase;
+        padding: 0.25rem 0;
+    }
+
+    .cal-day {
+        text-align: center;
+        padding: 0.35rem 0.1rem;
+        font-size: 0.82rem;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.15s;
+        position: relative;
+        line-height: 1.4;
+    }
+
+    .cal-day:hover:not(.cal-disabled):not(.cal-booked):not(.cal-pending) {
+        background: #f5ecd9;
+        color: var(--brand-gold);
+    }
+
+    .cal-day.cal-today {
+        font-weight: 700;
+        color: var(--brand-gold);
+    }
+
+    .cal-day.cal-selected {
+        background: var(--brand-gold) !important;
+        color: #fff !important;
+        font-weight: 600;
+    }
+
+    .cal-day.cal-in-range {
+        background: #f5ecd9;
+        color: var(--brand-gold);
+    }
+
+    .cal-day.cal-disabled {
+        color: #ccc;
+        opacity: 0.35;
+        cursor: default;
+        pointer-events: none;
+    }
+
+    .cal-day.cal-booked {
+        background: #fee2e2;
+        color: #ef4444;
+        cursor: not-allowed;
+        font-weight: 600;
+    }
+
+    .cal-day.cal-booked::after {
+        content: '';
+        position: absolute;
+        bottom: 3px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: #ef4444;
+    }
+
+    .cal-day.cal-pending {
+        background: #fef9c3;
+        color: #ca8a04;
+        cursor: not-allowed;
+        font-weight: 600;
+    }
+
+    .cal-day.cal-pending::after {
+        content: '';
+        position: absolute;
+        bottom: 3px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: #eab308;
+    }
+
+    .cal-day.cal-other-month {
+        opacity: 0.25;
+        pointer-events: none;
+    }
+
+    .cal-legend {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid #EBEBEB;
+        flex-wrap: wrap;
+    }
+
+    .cal-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.7rem;
+        color: #999;
+    }
+
+    .cal-legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+        flex-shrink: 0;
+    }
+
     .btn-submit {
         background-color: var(--brand-gold-dark);
         color: #FFFFFF;
@@ -201,6 +400,23 @@
         color: var(--text-dark);
     }
 
+/* Calendar styles (shared with public booking) */
+.cal-wrap{position:relative}
+.cal-trigger{display:flex;align-items:center;gap:.6rem;padding:.55rem .9rem;
+    border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--cream);
+    cursor:pointer;transition:border-color .2s;min-height:42px}
+.cal-trigger:hover,.cal-trigger.open{border-color:var(--gold)}
+.cal-trigger .cal-val{font-size:.88rem;color:var(--text-dark);font-weight:500}
+.cal-trigger .cal-placeholder{font-size:.88rem;color:var(--text-muted)}
+
+.cal-popup { position: fixed; z-index: 999999; background: #ffffff; border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: 0 12px 40px rgba(0,0,0,0.18); padding: 1rem; width: 320px; display: none; }
+.cal-popup.show { display: block !important; }
+
+.cal-day{cursor:pointer}
+.cal-day.cal-booked{background:#fee2e2;color:#ef4444;cursor:not-allowed;font-weight:600}
+.cal-day.cal-pending{background:#fef9c3;color:#ca8a04;cursor:not-allowed;font-weight:600}
+
+
 </style>
 @endpush
 
@@ -239,15 +455,32 @@
             <form action="{{ route('admin.manual_booking.submit') }}" method="POST">
                 @csrf
                 
+                {{-- Hidden date inputs (submitted to backend) --}}
+                <input type="hidden" name="check_in"  id="check_in"  required>
+                <input type="hidden" name="check_out" id="check_out" required>
+                
                 <div class="row row-form">
                     <div class="col-md-6 mb-3 mb-md-0">
                         <label class="form-label">Check-in Date</label>
-                        <input type="date" class="form-control" name="check_in" value="{{ old('check_in') }}" required>
+                        <div class="cal-wrap" id="wrap-ci">
+                            <div class="cal-trigger" id="trigger-ci" onclick="openCal('ci')">
+                                <i class="bi bi-calendar3 text-gold" style="font-size:.85rem"></i>
+                                <span class="cal-placeholder" id="display-ci">dd/mm/yyyy</span>
+                            </div>
+                            <div class="cal-popup" id="popup-ci"></div>
+                        </div>
+                        <div class="invalid-hint" id="hint-ci">Please select check-in date</div>
                     </div>
                     <div class="col-md-6">
-                        <!-- Corrected label from mockup (it said Check-in Date twice) -->
                         <label class="form-label">Check-out Date</label>
-                        <input type="date" class="form-control" name="check_out" value="{{ old('check_out') }}" required>
+                        <div class="cal-wrap" id="wrap-co">
+                            <div class="cal-trigger" id="trigger-co" onclick="openCal('co')">
+                                <i class="bi bi-calendar3 text-gold" style="font-size:.85rem"></i>
+                                <span class="cal-placeholder" id="display-co">dd/mm/yyyy</span>
+                            </div>
+                            <div class="cal-popup" id="popup-co"></div>
+                        </div>
+                        <div class="invalid-hint" id="hint-co">Please select check-out date</div>
                     </div>
                 </div>
 
@@ -288,4 +521,357 @@
         </form>
     </div>
 
+    
+
 @endsection
+
+@push('scripts')
+<script>
+let unavailDates = {};
+let calState = {
+    which: null,
+    year:  new Date().getFullYear(),
+    month: new Date().getMonth(),
+    selectedCI: null,
+    selectedCO: null,
+};
+
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYS   = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+function openCal(which) {
+    const otherWhich = which === 'ci' ? 'co' : 'ci';
+    const otherPopup = document.getElementById('popup-' + otherWhich);
+    if (otherPopup && otherPopup.classList.contains('show')) {
+        otherPopup.classList.remove('show');
+        document.getElementById('trigger-' + otherWhich).classList.remove('open');
+    }
+
+    const popup = document.getElementById('popup-' + which);
+
+    if (popup.classList.contains('show') && calState.which === which) {
+        closeCals();
+        return;
+    }
+
+    if (popup.parentElement !== document.body) {
+        document.body.appendChild(popup);
+    }
+
+    calState.which = which;
+
+    let ref = new Date();
+    if (which === 'ci') {
+        if (calState.selectedCI) ref = new Date(calState.selectedCI + 'T00:00:00');
+    } else {
+        if (calState.selectedCO) {
+            ref = new Date(calState.selectedCO + 'T00:00:00');
+        } else if (calState.selectedCI) {
+            ref = new Date(calState.selectedCI + 'T00:00:00');
+            ref.setDate(ref.getDate() + 1);
+        }
+    }
+    calState.year  = ref.getFullYear();
+    calState.month = ref.getMonth();
+
+    renderCal(which);
+    positionPopup(which);
+    popup.classList.add('show');
+    document.getElementById('trigger-' + which).classList.add('open');
+
+    fetch('/api/unavailable-dates?t=' + Date.now(), { cache: 'no-store' })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+            if (!data) return;
+            if (JSON.stringify(unavailDates) !== JSON.stringify(data)) {
+                unavailDates = data;
+                if (calState.which === which) renderCal(which);
+            }
+        })
+        .catch(() => {});
+}
+
+function positionPopup(which) {
+    const trigger = document.getElementById('trigger-' + which);
+    const popup   = document.getElementById('popup-' + which);
+    const rect    = trigger.getBoundingClientRect();
+
+    popup.style.visibility = 'hidden';
+    popup.style.display    = 'block';
+    popup.style.position   = 'fixed';
+    popup.style.left       = rect.left + 'px';
+    popup.style.top        = (rect.bottom + 6) + 'px';
+
+    requestAnimationFrame(() => {
+        const pw = popup.offsetWidth;
+        const ph = popup.offsetHeight;
+
+        let left = rect.left;
+        let top  = rect.bottom + 6;
+
+        if (left + pw > window.innerWidth - 10) {
+            left = Math.max(10, window.innerWidth - pw - 10);
+        }
+        if (top + ph > window.innerHeight - 10) {
+            top = rect.top - ph - 6;
+            if (top < 10) top = 10;
+        }
+
+        popup.style.left       = left + 'px';
+        popup.style.top        = top  + 'px';
+        popup.style.visibility = 'visible';
+        popup.style.display    = '';
+    });
+}
+
+function closeCals() {
+    ['ci','co'].forEach(w => {
+        const p = document.getElementById('popup-' + w);
+        if (p) p.classList.remove('show');
+        const t = document.getElementById('trigger-' + w);
+        if (t) t.classList.remove('open');
+    });
+    calState.which = null;
+}
+
+function renderCal(which) {
+    const popup  = document.getElementById('popup-' + which);
+    const today  = new Date(); today.setHours(0,0,0,0);
+    const y      = calState.year;
+    const m      = calState.month;
+    const first  = new Date(y, m, 1).getDay();
+    const total  = new Date(y, m + 1, 0).getDate();
+    const prevTotal = new Date(y, m, 0).getDate();
+
+    const minDate = (which === 'co' && calState.selectedCI)
+        ? (() => { const d = new Date(calState.selectedCI + 'T00:00:00'); d.setDate(d.getDate()+2); return d; })()
+        : today;
+
+    popup.innerHTML = '';
+
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem';
+
+    const btnPrev = document.createElement('button');
+    btnPrev.type      = 'button';
+    btnPrev.innerHTML = '&#8249;';
+    btnPrev.style.cssText = 'background:none;border:1.5px solid #ddd;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:1.1rem;line-height:1;display:flex;align-items:center;justify-content:center;color:#666;transition:all .2s';
+    btnPrev.onmouseenter = () => { btnPrev.style.borderColor='#b8924a'; btnPrev.style.color='#b8924a'; };
+    btnPrev.onmouseleave = () => { btnPrev.style.borderColor='#ddd';    btnPrev.style.color='#666'; };
+    btnPrev.addEventListener('click', function(e) {
+        e.stopPropagation();
+        calState.month--;
+        if (calState.month < 0) { calState.month = 11; calState.year--; }
+        renderCal(which);
+    });
+
+    const btnNext = document.createElement('button');
+    btnNext.type      = 'button';
+    btnNext.innerHTML = '&#8250;';
+    btnNext.style.cssText = btnPrev.style.cssText;
+    btnNext.onmouseenter = () => { btnNext.style.borderColor='#b8924a'; btnNext.style.color='#b8924a'; };
+    btnNext.onmouseleave = () => { btnNext.style.borderColor='#ddd';    btnNext.style.color='#666'; };
+    btnNext.addEventListener('click', function(e) {
+        e.stopPropagation();
+        calState.month++;
+        if (calState.month > 11) { calState.month = 0; calState.year++; }
+        renderCal(which);
+    });
+
+    const monthLabel = document.createElement('div');
+    monthLabel.style.cssText = "font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:600;color:#3a3028";
+    monthLabel.textContent   = MONTHS[m] + ' ' + y;
+
+    header.appendChild(btnPrev);
+    header.appendChild(monthLabel);
+    header.appendChild(btnNext);
+    popup.appendChild(header);
+
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(7,1fr);gap:2px;min-width:280px';
+
+    DAYS.forEach(d => {
+        const el = document.createElement('div');
+        el.style.cssText = 'text-align:center;font-size:.65rem;font-weight:600;color:#aaa;padding:.25rem 0;text-transform:uppercase';
+        el.textContent = d;
+        grid.appendChild(el);
+    });
+
+    for (let i = first - 1; i >= 0; i--) {
+        const el = document.createElement('div');
+        el.style.cssText = 'text-align:center;padding:.35rem .1rem;font-size:.82rem;opacity:.2;line-height:1.6';
+        el.textContent = prevTotal - i;
+        grid.appendChild(el);
+    }
+
+    for (let day = 1; day <= total; day++) {
+        const mm      = String(m + 1).padStart(2, '0');
+        const dd      = String(day).padStart(2, '0');
+        const dateStr = `${y}-${mm}-${dd}`;
+        const dateObj = new Date(y, m, day);
+
+        const isPast    = dateObj < minDate;
+        const uStatus   = unavailDates[dateStr];
+        const isBooked  = uStatus === 'CONFIRMED';
+        const isPending = uStatus === 'PENDING';
+        const isSelCI   = dateStr === calState.selectedCI;
+        const isSelCO   = dateStr === calState.selectedCO;
+        const inRange   = calState.selectedCI && calState.selectedCO
+                          && dateStr > calState.selectedCI && dateStr < calState.selectedCO;
+        const isToday   = dateObj.getTime() === today.getTime();
+
+        const el = document.createElement('div');
+        el.style.cssText = `text-align:center;padding:.35rem .1rem;font-size:.82rem;border-radius:6px;line-height:1.6;transition:background .15s;position:relative`;
+        el.textContent = day;
+
+        if (isSelCI || isSelCO) {
+            el.style.background = '#b8924a';
+            el.style.color      = '#fff';
+            el.style.fontWeight = '600';
+            el.style.cursor     = 'pointer';
+        } else if (inRange) {
+            el.style.background = '#f5ecd9';
+            el.style.color      = '#b8924a';
+            el.style.cursor     = 'pointer';
+        } else if (isBooked) {
+            el.style.background = '#fee2e2';
+            el.style.color      = '#ef4444';
+            el.style.fontWeight = '600';
+            el.style.cursor     = 'not-allowed';
+            const dot = document.createElement('span');
+            dot.style.cssText = 'position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:#ef4444;display:block';
+            el.appendChild(dot);
+        } else if (isPending) {
+            el.style.background = '#fef9c3';
+            el.style.color      = '#ca8a04';
+            el.style.fontWeight = '600';
+            el.style.cursor     = 'not-allowed';
+            const dot = document.createElement('span');
+            dot.style.cssText = 'position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:#eab308;display:block';
+            el.appendChild(dot);
+        } else if (isPast) {
+            el.style.color  = '#ccc';
+            el.style.cursor = 'default';
+        } else {
+            el.style.cursor = 'pointer';
+            if (isToday) {
+                el.style.fontWeight = '700';
+                el.style.border     = '1.5px solid #b8924a';
+                el.style.color      = '#b8924a';
+            } else {
+                el.style.color = '#3a3028';
+            }
+            el.addEventListener('mouseenter', () => {
+                el.style.background = '#f5ecd9';
+                el.style.color      = '#b8924a';
+            });
+            el.addEventListener('mouseleave', () => {
+                el.style.background = 'transparent';
+                el.style.color      = isToday ? '#b8924a' : '#3a3028';
+            });
+            el.addEventListener('click', function(e) {
+                e.stopPropagation();
+                pickDate(dateStr, which);
+            });
+        }
+
+        grid.appendChild(el);
+    }
+
+    const filled    = first + total;
+    const remainder = filled % 7 === 0 ? 0 : 7 - (filled % 7);
+    for (let i = 1; i <= remainder; i++) {
+        const el = document.createElement('div');
+        el.style.cssText = 'text-align:center;padding:.35rem .1rem;font-size:.82rem;opacity:.2;line-height:1.6';
+        el.textContent = i;
+        grid.appendChild(el);
+    }
+
+    popup.appendChild(grid);
+
+    const legend = document.createElement('div');
+    legend.style.cssText = 'display:flex;gap:.75rem;margin-top:.75rem;padding-top:.75rem;border-top:1px solid #eee;flex-wrap:wrap';
+    const legendItems = [
+        { bg:'#fee2e2', border:'#ef4444', label:'Fully Booked' },
+        { bg:'#fef9c3', border:'#eab308', label:'Pending'      },
+        { bg:'#b8924a', border:'',        label:'Selected'     },
+    ];
+    legendItems.forEach(li => {
+        const item = document.createElement('div');
+        item.style.cssText = 'display:flex;align-items:center;gap:.35rem;font-size:.7rem;color:#999';
+        const dot  = document.createElement('div');
+        dot.style.cssText = `width:10px;height:10px;border-radius:3px;background:${li.bg};flex-shrink:0${li.border ? ';border:1.5px solid '+li.border : ''}`;
+        item.appendChild(dot);
+        item.appendChild(document.createTextNode(li.label));
+        legend.appendChild(item);
+    });
+    popup.appendChild(legend);
+}
+
+function pickDate(dateStr, which) {
+    if (which === 'ci') {
+        calState.selectedCI = dateStr;
+
+        if (calState.selectedCO && calState.selectedCO <= dateStr) {
+            calState.selectedCO = null;
+            document.getElementById('check_out').value = '';
+            const dco = document.getElementById('display-co');
+            dco.textContent  = 'dd/mm/yyyy';
+            dco.className    = 'cal-placeholder';
+        }
+
+        document.getElementById('check_in').value = dateStr;
+        const dci = document.getElementById('display-ci');
+        dci.textContent = fmtDisplay(dateStr);
+        dci.className   = 'cal-val';
+
+        document.getElementById('hint-ci').style.display = 'none';
+        document.getElementById('trigger-ci').style.borderColor = '';
+
+        closeCals();
+        setTimeout(() => openCal('co'), 150);
+
+    } else {
+        calState.selectedCO = dateStr;
+        document.getElementById('check_out').value = dateStr;
+        const dco = document.getElementById('display-co');
+        dco.textContent = fmtDisplay(dateStr);
+        dco.className   = 'cal-val';
+
+        document.getElementById('hint-co').style.display = 'none';
+        document.getElementById('trigger-co').style.borderColor = '';
+
+        closeCals();
+    }
+}
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.cal-wrap') && !e.target.closest('.cal-popup')) {
+        closeCals();
+    }
+});
+
+document.addEventListener('wheel', function(e) {
+    if (calState.which) {
+        const popup = document.getElementById('popup-' + calState.which);
+        if (popup && popup.classList.contains('show') && !popup.contains(e.target)) {
+            e.preventDefault();
+        }
+    }
+}, { passive: false });
+
+fetch('/api/unavailable-dates?t=' + Date.now(), { cache: 'no-store' })
+    .then(r => {
+        if (!r.ok) throw new Error(`API ${r.status}`);
+        return r.json();
+    })
+    .then(data => {
+        unavailDates = data;
+        if (calState.which) renderCal(calState.which);
+    })
+    .catch(() => { unavailDates = {}; });
+
+function fmtDisplay(dateStr) { const d = new Date(dateStr + 'T00:00:00'); return ('0'+d.getDate()).slice(-2) + '/' + ('0'+(d.getMonth()+1)).slice(-2) + '/' + d.getFullYear(); }
+
+</script>
+@endpush
