@@ -126,6 +126,41 @@
             color: #bd2130;
         }
 
+        /* Modal theme overrides to match site */
+        .modal-content {
+            border-radius: 12px;
+            border: 1px solid rgba(0,0,0,0.04);
+            overflow: hidden;
+        }
+        .modal-header {
+            border-bottom: none;
+            padding-bottom: 0.5rem;
+        }
+        .modal-title {
+            color: var(--brand-gold-dark);
+            font-weight: 700;
+            font-family: 'Cormorant Garamond', serif;
+        }
+        .modal-body {
+            color: var(--text-dark);
+            font-size: 0.95rem;
+        }
+        .btn-primary-brand {
+            background: var(--brand-gold);
+            border-color: var(--brand-gold);
+            color: #fff;
+            box-shadow: none;
+        }
+        .btn-primary-brand:hover {
+            background: var(--brand-gold-dark);
+            border-color: var(--brand-gold-dark);
+        }
+        .btn-secondary-light {
+            background: #F5F5F5;
+            border-color: #EAEAEA;
+            color: var(--text-dark);
+        }
+
         /* Main Content Styling */
         .main-content {
             margin-left: var(--sidebar-width);
@@ -314,15 +349,15 @@
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
+                        <h5 class="modal-title" id="logoutModalLabel">Konfirmasi Logout</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        Are you sure you want to logout?
+                        Apakah Anda yakin ingin keluar dari akun?
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button id="confirmLogoutBtn" type="button" class="btn btn-primary">Yes, logout</button>
+                        <button type="button" class="btn btn-secondary-light" data-bs-dismiss="modal">Batal</button>
+                        <button id="confirmLogoutBtn" type="button" class="btn btn-primary-brand">Ya, Keluar</button>
                     </div>
                 </div>
             </div>
@@ -334,7 +369,7 @@
                         var confirmBtn = document.getElementById('confirmLogoutBtn');
                         var logoutForm = document.getElementById('logoutForm');
                         var logoutModalEl = document.getElementById('logoutModal');
-                        var logoutModal = new bootstrap.Modal(logoutModalEl);
+                        var logoutModal = new bootstrap.Modal(logoutModalEl, { backdrop: true });
 
                         if (logoutBtn) {
                                 logoutBtn.addEventListener('click', function(e) {
