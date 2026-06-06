@@ -1,10 +1,13 @@
-# build frontend asset
+# =========================
+# Stage 1: Build Vite assets
+# =========================
 FROM node:22-alpine AS assets
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package*.json ./
+
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 COPY resources ./resources
 COPY public ./public
@@ -13,8 +16,10 @@ COPY vite.config.js ./
 RUN npm run build
 
 
-# main laravel app
-FROM php:8.3-apache
+# =========================
+# Stage 2: Laravel + Apache
+# =========================
+FROM php:8.4-apache
 
 WORKDIR /var/www/html
 
@@ -32,6 +37,7 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     libicu-dev \
     libxml2-dev \
+    libxslt1-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
         pdo_pgsql \
@@ -41,6 +47,10 @@ RUN apt-get update && apt-get install -y \
         gd \
         mbstring \
         intl \
+        dom \
+        exif \
+        pcntl \
+        xsl \
         opcache \
     && a2enmod rewrite headers \
     && apt-get clean \
@@ -60,6 +70,7 @@ RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-avail
     && chmod -R 775 storage bootstrap/cache
 
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE 80
