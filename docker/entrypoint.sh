@@ -20,6 +20,10 @@ php artisan storage:link || true
 
 php artisan migrate --force
 
+if [ "$RUN_SEEDER" = "true" ]; then
+    php artisan db:seed --force
+fi
+
 php artisan config:cache
 php artisan view:cache || true
 
