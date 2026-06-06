@@ -43,9 +43,6 @@
     $code = $booking->booking_code ?? '—';
 @endphp
 
-@if($status === 'CONFIRMED')
-    @include('booking.done-clean')
-@else
 <div class="page-header fade-up">
     <span class="section-label">Reservations</span>
     <h1>Track Your <em>Booking</em></h1>
@@ -228,11 +225,8 @@
     </div>
     @endif
 </div>
-    @endif
-
 </div>
 
-@endif
 @endsection
 
 @push('scripts')

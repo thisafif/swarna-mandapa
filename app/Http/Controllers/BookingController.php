@@ -64,6 +64,9 @@ class BookingController extends Controller
             'promo_code'      => $promoCode,
         ]);
 
+        // Bersihkan session dari booking sebelumnya agar bisa membuat booking baru
+        session()->forget(['booking_code', 'payment_order_id']);
+
         session(['booking' => $session]);
         return redirect()->route('booking.confirmation');
     }
@@ -120,6 +123,11 @@ class BookingController extends Controller
         $booking = Booking::where('booking_code', $code)->first();
         if (!$booking) return redirect()->route('booking.form');
 
+        // Jika booking sudah terbayar, arahkan langsung ke halaman status (Done)
+        if ($booking->status === 'CONFIRMED') {
+            return redirect()->route('booking.status', ['code' => $booking->booking_code]);
+        }
+
         return view('booking.invoice', compact('booking'));
     }
 
@@ -171,6 +179,10 @@ class BookingController extends Controller
 
             if ($booking && $booking->status === 'PENDING' && $booking->isExpired()) {
                 $booking->update(['status' => 'CANCELLED']);
+            }
+
+            if ($booking && $booking->status === 'CONFIRMED') {
+                return view('booking.done-clean', compact('booking'));
             }
         }
         return view('booking.status', compact('booking'));
