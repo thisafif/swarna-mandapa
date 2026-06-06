@@ -102,7 +102,9 @@
         border: 1px solid #F0F0F0;
         border-radius: 12px;
         position: relative;
-        padding: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         transition: transform 0.2s, box-shadow 0.2s;
         background-color: #FFFFFF;
         cursor: pointer;
@@ -113,28 +115,20 @@
     }
 
     .day-number {
-        position: absolute;
-        top: 1rem;
-        right: 1rem;
         font-size: 1.15rem;
         font-weight: 700;
         color: #7A6953;
+        z-index: 2;
     }
 
     /* ─── Status: Booked (dari booking PENDING/CONFIRMED) ─── */
     .day-box.booked {
         background: linear-gradient(135deg, #DFCAA5 0%, #D4BC97 100%);
         border-color: #DFCAA5;
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
     }
     .day-box.booked .day-number {
         color: #55442A;
-    }
-    .day-box.booked::before {
-        content: '📅';
-        position: absolute;
-        bottom: 0.5rem;
-        left: 0.5rem;
-        font-size: 1rem;
     }
 
     /* ─── Status: Booked (dari booking PENDING/CONFIRMED) ─── */
@@ -180,16 +174,13 @@
 
     @media (max-width: 991px) {
         .calendar-grid {
-            gap: 0.5rem;
+            gap: 0.35rem;
         }
         .day-box {
             border-radius: 8px;
-            padding: 0.5rem;
         }
         .day-number {
-            font-size: 0.95rem;
-            top: 0.5rem;
-            right: 0.5rem;
+            font-size: 1rem;
         }
         .calendar-weekday {
             font-size: 0.65rem;
@@ -202,7 +193,7 @@
             font-size: 1.8rem;
         }
         .calendar-container {
-            padding: 1.5rem 1rem;
+            padding: 1.5rem 0.75rem;
         }
         .calendar-month-title {
             font-size: 1.25rem;

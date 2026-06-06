@@ -136,23 +136,12 @@
             <div class="panel fade-up">
                 <div class="panel-title"><i class="bi bi-credit-card me-2 text-gold"></i>Payment Method</div>
                 <div class="d-flex align-items-center gap-3">
-                    @php $method = $booking['payment_method'] ?? 'card' @endphp
                     <div class="rounded-3 p-2 border" style="background:var(--cream);width:52px;height:40px;display:grid;place-items:center">
-                        @if($method === 'card') <i class="bi bi-credit-card-2-front text-gold fs-5"></i>
-                        @elseif($method === 'va') <i class="bi bi-bank text-gold fs-5"></i>
-                        @else <i class="bi bi-wallet2 text-gold fs-5"></i> @endif
+                        <i class="bi bi-shield-check text-gold fs-5"></i>
                     </div>
                     <div>
-                        @if($method === 'card')
-                            <div class="fw-600">Credit / Debit Card</div>
-                            <div class="text-muted-sm">Pilih detail kartu di halaman DOKU</div>
-                        @elseif($method === 'va')
-                            <div class="fw-600">Virtual Account — {{ $booking['va_bank'] ?? 'BCA' }}</div>
-                            <div class="text-muted-sm">Account number will be generated after confirmation</div>
-                        @else
-                            <div class="fw-600">E-Wallet — {{ ucfirst($booking['ewallet'] ?? 'gopay') }}</div>
-                            <div class="text-muted-sm">You'll be redirected to complete payment</div>
-                        @endif
+                        <div class="fw-600">Secure Payment via DOKU</div>
+                        <div class="text-muted-sm">You will be redirected to choose your preferred payment method</div>
                     </div>
                 </div>
             </div>

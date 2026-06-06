@@ -595,6 +595,18 @@
         </div>
     </div>
 
+    <!-- Delete Modal -->
+    <div class="detail-backdrop" id="deleteBackdrop" onclick="closeDeleteModal()"></div>
+    <div id="deleteModal" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9); background: #FFF; border-radius: 12px; z-index: 1055; box-shadow: 0 10px 40px rgba(0,0,0,0.2); width: 400px; max-width: 90vw; opacity: 0; pointer-events: none; transition: all 0.3s ease; display: none; text-align: center; padding: 2.5rem 2rem;">
+        <div style="font-size: 3.5rem; color: #E05A5A; margin-bottom: 0.5rem; line-height: 1;"><i class="bi bi-exclamation-circle"></i></div>
+        <h3 style="margin-bottom: 0.75rem; font-size: 1.5rem; color: var(--brand-gold-dark); font-family: 'Cormorant Garamond', serif; font-weight: 700;">Delete Booking</h3>
+        <p style="color: #666; margin-bottom: 2rem; font-size: 0.95rem; line-height: 1.5;">Are you sure you want to delete this booking?<br>This action cannot be undone.</p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <button class="btn" style="background-color: #E8E8E8; color: #333; font-weight: 600; border-radius: 8px; padding: 0.75rem; border: none; cursor: pointer; transition: background-color 0.2s;" onclick="closeDeleteModal()" onmouseover="this.style.backgroundColor='#D8D8D8'" onmouseout="this.style.backgroundColor='#E8E8E8'">Cancel</button>
+            <button class="btn" style="background-color: #FFE5E5; color: #E05A5A; font-weight: 600; border-radius: 8px; padding: 0.75rem; border: none; cursor: pointer; transition: background-color 0.2s;" onclick="confirmDeleteBooking()" onmouseover="this.style.backgroundColor='#FFD0D0'" onmouseout="this.style.backgroundColor='#FFE5E5'">Yes, Delete</button>
+        </div>
+    </div>
+
     <!-- Script to toggle offcanvas -->
     <script>
         let currentBookingId = null;
@@ -621,10 +633,10 @@
                 document.getElementById('dp-check-in').textContent = checkIn.toLocaleDateString('en-US', options);
                 document.getElementById('dp-check-out').textContent = checkOut.toLocaleDateString('en-US', options);
                 document.getElementById('dp-guests').textContent = bookingData.guests;
-                document.getElementById('dp-price-per-night').textContent = '$' + parseFloat(bookingData.price_per_night).toLocaleString('en-US', {minimumFractionDigits: 2});
+                document.getElementById('dp-price-per-night').textContent = 'Rp ' + parseFloat(bookingData.price_per_night).toLocaleString('id-ID');
                 document.getElementById('dp-nights').textContent = nights;
-                document.getElementById('dp-discount').textContent = '$' + parseFloat(bookingData.discount_amount).toLocaleString('en-US', {minimumFractionDigits: 2});
-                document.getElementById('dp-total-price').textContent = '$' + parseFloat(bookingData.total_price).toLocaleString('en-US', {minimumFractionDigits: 2});
+                document.getElementById('dp-discount').textContent = 'Rp ' + parseFloat(bookingData.discount_amount).toLocaleString('id-ID');
+                document.getElementById('dp-total-price').textContent = 'Rp ' + parseFloat(bookingData.total_price).toLocaleString('id-ID');
                 
                 document.getElementById('detailBackdrop').classList.add('show');
                 document.getElementById('detailPanel').classList.add('show');
@@ -685,28 +697,50 @@
 
         function deleteBooking() {
             if (!currentBookingId) return;
+            document.getElementById('deleteBackdrop').classList.add('show');
+            const modal = document.getElementById('deleteModal');
+            modal.style.display = 'block';
+            // Slight delay for transition to work after display:block
+            setTimeout(() => {
+                modal.style.opacity = '1';
+                modal.style.pointerEvents = 'auto';
+                modal.style.transform = 'translate(-50%, -50%) scale(1)';
+            }, 10);
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteBackdrop').classList.remove('show');
+            const modal = document.getElementById('deleteModal');
+            modal.style.opacity = '0';
+            modal.style.pointerEvents = 'none';
+            modal.style.transform = 'translate(-50%, -50%) scale(0.9)';
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+        }
+
+        function confirmDeleteBooking() {
+            if (!currentBookingId) return;
             
-            if (confirm('Are you sure you want to delete this booking? This action cannot be undone.')) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = `/admin/booking-list/${currentBookingId}`;
-                
-                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-                const methodInput = document.createElement('input');
-                methodInput.type = 'hidden';
-                methodInput.name = '_method';
-                methodInput.value = 'DELETE';
-                
-                const tokenInput = document.createElement('input');
-                tokenInput.type = 'hidden';
-                tokenInput.name = '_token';
-                tokenInput.value = csrfToken;
-                
-                form.appendChild(methodInput);
-                form.appendChild(tokenInput);
-                document.body.appendChild(form);
-                form.submit();
-            }
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/admin/booking-list/${currentBookingId}`;
+            
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+            const methodInput = document.createElement('input');
+            methodInput.type = 'hidden';
+            methodInput.name = '_method';
+            methodInput.value = 'DELETE';
+            
+            const tokenInput = document.createElement('input');
+            tokenInput.type = 'hidden';
+            tokenInput.name = '_token';
+            tokenInput.value = csrfToken;
+            
+            form.appendChild(methodInput);
+            form.appendChild(tokenInput);
+            document.body.appendChild(form);
+            form.submit();
         }
 
         // Handle Edit Form Submission

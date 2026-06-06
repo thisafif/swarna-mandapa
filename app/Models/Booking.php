@@ -12,6 +12,7 @@ class Booking extends Model
         'first_name', 'last_name', 'email', 'phone', 'country',
         'promo_code', 'price_per_night', 'discount_amount', 'total_price',
         'status', 'is_manual', 'payment_ref', 'expires_at', 'notes',
+        'payment_order_id', 'payment_id', 'paid_at',
     ];
 
     protected $casts = [

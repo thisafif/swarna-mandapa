@@ -23,9 +23,9 @@
         <div class="grid gap-4">
             <h2 class="font-serif font-bold">Social Media</h2>
             <div class="flex gap-4" aria-label="Social media links">
-                <a href="#" aria-label="Instagram" class="grid size-[42px] place-items-center rounded-full border border-white/60 text-xl !text-white !no-underline transition hover:border-[#ffdc7d] hover:!text-[#ffdc7d]"><i class="fa-brands fa-instagram" aria-hidden="true"></i></a>
-                <a href="#" aria-label="TikTok" class="grid size-[42px] place-items-center rounded-full border border-white/60 text-lg !text-white !no-underline transition hover:border-[#ffdc7d] hover:!text-[#ffdc7d]"><i class="fa-brands fa-tiktok" aria-hidden="true"></i></a>
-                <a href="#" aria-label="Facebook" class="grid size-[42px] place-items-center rounded-full border border-white/60 text-lg !text-white !no-underline transition hover:border-[#ffdc7d] hover:!text-[#ffdc7d]"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a>
+                <a href="https://www.instagram.com/swarnamandapa?igsh=d3dwY3diOTNqbHhz" target="_blank" rel="noopener noreferrer" aria-label="Instagram" class="grid size-[42px] place-items-center rounded-full border border-white/60 text-xl !text-white !no-underline transition hover:border-[#ffdc7d] hover:!text-[#ffdc7d]"><i class="fa-brands fa-instagram" aria-hidden="true"></i></a>
+                <a href="https://wa.me/64272973575" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" class="grid size-[42px] place-items-center rounded-full border border-white/60 text-xl !text-white !no-underline transition hover:border-[#ffdc7d] hover:!text-[#ffdc7d]"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
+                <a href="mailto:reservations@swarnamandapa.com" aria-label="Email" class="grid size-[42px] place-items-center rounded-full border border-white/60 text-lg !text-white !no-underline transition hover:border-[#ffdc7d] hover:!text-[#ffdc7d]"><i class="fa-solid fa-envelope" aria-hidden="true"></i></a>
             </div>
         </div>
     </div>

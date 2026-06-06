@@ -276,11 +276,29 @@
             color: var(--text-dark);
         }
 
+        .sidebar-backdrop {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 999;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .sidebar-backdrop.show {
+            display: block;
+            opacity: 1;
+        }
+
         @media (max-width: 991px) {
             .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; }
-            .mobile-toggle { display: inline-flex; }
-            .sidebar.show { transform: translateX(0); }
+            .mobile-toggle { display: inline-flex; margin-right: auto; }
+            .sidebar.show { transform: translateX(0); box-shadow: 4px 0 20px rgba(0,0,0,0.1); }
             .main-content { margin-left: 0; max-width: 100%; }
+            .top-header { padding: 0 1.25rem; justify-content: space-between; }
+            .top-header-inner { gap: 1rem; }
+            .profile-info { display: none; }
+            .page-content { padding: 1.25rem; }
             .metrics-grid { grid-template-columns: repeat(2, 1fr); }
         }
     </style>
@@ -288,6 +306,7 @@
 </head>
 <body>
 
+    <div class="sidebar-backdrop d-lg-none" onclick="toggleSidebar()"></div>
     <aside class="sidebar">
         <div class="sidebar-brand">
             <img src="{{ asset('images/logo-swarna-mandapa.png') }}" alt="Swarna Mandapa Logo">
@@ -324,7 +343,7 @@
 
     <main class="main-content">
         <header class="top-header">
-            <i class="bi bi-list mobile-toggle d-lg-none" onclick="document.querySelector('.sidebar').classList.toggle('show');"></i>
+            <i class="bi bi-list mobile-toggle d-lg-none" onclick="toggleSidebar()"></i>
             <div class="top-header-inner">
                 <i class="bi bi-bell notification-bell"></i>
                 <div class="header-divider"></div>
@@ -349,21 +368,33 @@
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="logoutModalLabel">Konfirmasi Logout</h5>
+                        <h5 class="modal-title" id="logoutModalLabel">Logout Confirmation</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        Apakah Anda yakin ingin keluar dari akun?
+                        Are you sure you want to log out?
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary-light" data-bs-dismiss="modal">Batal</button>
-                        <button id="confirmLogoutBtn" type="button" class="btn btn-primary-brand">Ya, Keluar</button>
+                        <button type="button" class="btn btn-secondary-light" data-bs-dismiss="modal">Cancel</button>
+                        <button id="confirmLogoutBtn" type="button" class="btn btn-primary-brand">Yes, Logout</button>
                     </div>
                 </div>
             </div>
         </div>
 
         <script>
+                function toggleSidebar() {
+                    document.querySelector('.sidebar').classList.toggle('show');
+                    const backdrop = document.querySelector('.sidebar-backdrop');
+                    if (backdrop.classList.contains('show')) {
+                        backdrop.classList.remove('show');
+                        setTimeout(() => backdrop.style.display = 'none', 300);
+                    } else {
+                        backdrop.style.display = 'block';
+                        setTimeout(() => backdrop.classList.add('show'), 10);
+                    }
+                }
+
                 document.addEventListener('DOMContentLoaded', function() {
                         var logoutBtn = document.getElementById('logoutBtn');
                         var confirmBtn = document.getElementById('confirmLogoutBtn');

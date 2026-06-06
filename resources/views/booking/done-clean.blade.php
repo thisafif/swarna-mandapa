@@ -18,29 +18,68 @@
     .step-item.active .step-lbl { color:var(--gold); font-weight:600 }
     .step-item.done .step-lbl { color:var(--success) }
 
-    /* Simple Success Message */
+    /* Premium Success Message */
     .success-banner {
-        background: white;
-        border: 1px solid #e0e0e0;
-        border-radius: 8px;
-        padding: 2rem;
+        background: #FFFFFF;
+        border: 1px solid rgba(201, 169, 110, 0.2);
+        border-radius: 12px;
+        padding: 3.5rem 2rem;
         text-align: center;
-        margin-bottom: 2rem;
+        margin-bottom: 2.5rem;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.03);
+        animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        opacity: 0;
+        transform: translateY(20px);
     }
+    
+    @keyframes fadeInUp {
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .success-icon-wrapper {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+        box-shadow: 0 0 0 10px rgba(76, 175, 80, 0.1);
+        animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s forwards;
+        opacity: 0;
+        transform: scale(0.5);
+    }
+
+    @keyframes scaleIn {
+        to { opacity: 1; transform: scale(1); }
+    }
+
     .success-icon {
-        font-size: 48px;
-        color: #16a34a;
-        margin-bottom: 1rem;
+        font-size: 40px;
+        color: #2E7D32;
     }
+
     .success-title {
-        font-size: 24px;
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 32px;
         font-weight: 600;
+        color: #C9A96E; /* Brand Gold */
+        margin-bottom: 0.75rem;
+        line-height: 1.2;
+    }
+    .success-title em {
+        font-style: italic;
+        font-weight: 500;
         color: #333;
-        margin-bottom: 0.5rem;
     }
     .success-message {
-        font-size: 14px;
-        color: #666;
+        font-size: 15px;
+        color: #555;
+        letter-spacing: 0.02em;
+        max-width: 400px;
+        margin: 0 auto;
+        line-height: 1.6;
     }
 
     /* Card */
@@ -130,8 +169,10 @@
 
     <!-- Success Message -->
     <div class="success-banner">
-        <div class="success-icon">✓</div>
-        <div class="success-title">Thank You, {{ $guestName }}!</div>
+        <div class="success-icon-wrapper">
+            <i class="bi bi-check-lg success-icon"></i>
+        </div>
+        <div class="success-title">Thank You, <em>{{ $guestName }}</em></div>
         <div class="success-message">Your booking has been confirmed and payment received.</div>
     </div>
 

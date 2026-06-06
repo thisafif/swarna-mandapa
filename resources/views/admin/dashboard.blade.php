@@ -190,26 +190,31 @@
 
     @media (max-width: 991px) {
         .page-title {
-            font-size: 1.8rem;
-            margin-bottom: 2rem;
+            font-size: 1.6rem;
+            margin-bottom: 1.5rem;
         }
         .metric-cards-container {
             flex-wrap: wrap;
-            gap: 1rem;
+            gap: 0.75rem;
         }
         .metric-card {
-            flex: 1 1 calc(50% - 0.5rem);
-            min-width: 40%;
+            flex: 1 1 calc(50% - 0.75rem);
+            min-width: 0;
+            max-width: none;
+            padding: 1.25rem 1rem;
         }
         .metric-card:last-child {
             flex: 1 1 100%;
+        }
+        .metric-value {
+            font-size: 2rem;
         }
         .dashboard-grid {
             grid-template-columns: 1fr;
             gap: 1.5rem;
         }
         .widget-panel {
-            padding: 1.5rem;
+            padding: 1.25rem;
             max-width: 100vw;
             overflow-x: hidden;
         }
