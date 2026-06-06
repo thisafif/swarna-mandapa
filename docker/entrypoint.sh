@@ -18,6 +18,7 @@ php artisan storage:link || true
 
 php artisan migrate --force
 
+php artisan package:discover --ansi || true
 php artisan config:cache
 php artisan view:cache || true
 
