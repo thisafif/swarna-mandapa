@@ -113,10 +113,10 @@
                 </div>
 
                 <label class="form-label">Full Name</label>
-                <input type="text" class="form-control" name="name" value="{{ session('admin_name', 'MEGA MUTIARA') }}" required>
+                <input type="text" class="form-control" name="name" value="{{ old('name', $admin->name ?? session('admin_name', '')) }}" required>
 
                 <label class="form-label">Email Address</label>
-                <input type="email" class="form-control" name="email" value="{{ session('admin_email', 'admin@gmail.com') }}" required>
+                <input type="email" class="form-control" name="email" value="{{ old('email', $admin->email ?? session('admin_email', '')) }}" required>
 
                 <label class="form-label">New Password (Leave blank to keep current)</label>
                 <input type="password" class="form-control" name="password" placeholder="••••••••">

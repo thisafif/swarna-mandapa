@@ -1,12 +1,15 @@
 <?php
 
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\BlockedDateController;
 use App\Http\Controllers\PromoController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\AdminAuthController;
 use App\Models\Booking;
+use App\Models\Admin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\Rule;
 use App\Http\Controllers\ReviewController;
 
 Route::get('/', function () {
@@ -66,13 +69,32 @@ Route::middleware(['admin.auth'])->prefix('admin')->name('admin.')->group(functi
     })->name('dashboard');
 
     Route::get('/edit-profile', function () {
-        return view('admin.edit_profile');
+        $admin = Admin::find(session('admin_id'));
+
+        return view('admin.edit_profile', compact('admin'));
     })->name('edit_profile');
 
     Route::post('/edit-profile', function (\Illuminate\Http\Request $request) {
+        $admin = Admin::findOrFail(session('admin_id'));
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:100'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('admins', 'email')->ignore($admin->id)],
+            'password' => ['nullable', 'string', 'min:8'],
+        ]);
+
+        $admin->name = $validated['name'];
+        $admin->email = $validated['email'];
+
+        if (! empty($validated['password'])) {
+            $admin->password = $validated['password'];
+        }
+
+        $admin->save();
+
         session([
-            'admin_name'  => $request->input('name', 'EGA MUTIARA'),
-            'admin_email' => $request->input('email', 'admin@gmail.com'),
+            'admin_name'  => $admin->name,
+            'admin_email' => $admin->email,
         ]);
 
         return redirect()->route('admin.dashboard')->with('profile_updated', true);
@@ -122,6 +144,11 @@ Route::middleware(['admin.auth'])->prefix('admin')->name('admin.')->group(functi
     Route::get('/availability-calendar', function () {
         return view('admin.calendar');
     })->name('calendar');
+
+    Route::get('/blocked-dates', [BlockedDateController::class, 'index'])->name('blocked_dates.index');
+    Route::post('/blocked-dates', [BlockedDateController::class, 'store'])->name('blocked_dates.store');
+    Route::put('/blocked-dates/{blockedDate}', [BlockedDateController::class, 'update'])->name('blocked_dates.update');
+    Route::delete('/blocked-dates/{blockedDate}', [BlockedDateController::class, 'destroy'])->name('blocked_dates.destroy');
 
     Route::get('/villa-settings', function () {
         return view('admin.villa_settings');
@@ -192,15 +219,6 @@ Route::post('/api/apply-promo', [BookingController::class, 'applyPromo'])->name(
 Route::post('/payment/create', [PaymentController::class, 'createPayment'])->name('payment.create');
 Route::post('/payment/callback', [PaymentController::class, 'callback'])->name('payment.callback');
 Route::get('/payment/return', [PaymentController::class, 'returnPage'])->name('payment.return');
-
-Route::get('/api/test-promo', function() {
-    $promo = \App\Models\Promo::first();
-    return response()->json([
-        'table_exists' => true,
-        'promo_count'  => \App\Models\Promo::count(),
-        'sample'       => $promo,
-    ]);
-});
 
 // Debug helper: clear booking session (only when app debug enabled)
 if (config('app.debug')) {

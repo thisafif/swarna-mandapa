@@ -101,7 +101,7 @@
                            value="{{ old('promo_name') }}" required>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Promo Code <small style="color:#b8924a">(diketik tamu)</small></label>
+                    <label class="form-label">Promo Code <small style="color:#b8924a">(typed manually by guest)</small></label>
                     <input type="text" class="form-control" name="promo_code"
                            placeholder="e.g. NEWYEAR25"
                            value="{{ old('promo_code') }}"
@@ -146,12 +146,11 @@
 
             {{-- Daftar promo --}}
             <h3 class="section-title">Active Promos</h3>
-            @php 
+            @php
                 $promos = \App\Models\Promo::orderByDesc('created_at')->get();
-                $now = \Carbon\Carbon::now();
-                $today = \Carbon\Carbon::now()->toDateString();
+                $today = \Carbon\Carbon::today();
             @endphp
-            
+
             @if($promos->isEmpty())
                 <p style="font-size:.85rem;color:#aaa;text-align:center;padding:1rem 0">No promos yet. Add one above.</p>
             @else
@@ -170,13 +169,15 @@
                     <tbody>
                         @foreach($promos as $p)
                             @php
-                                $startDate = \Carbon\Carbon::parse($p->valid_from);
-                                $endDate = \Carbon\Carbon::parse($p->valid_until);
-                                $daysLeft = $endDate->diffInDays($now, false);
-                                $isExpired = $endDate->lt($now);
-                                $isNotStarted = $startDate->gt($now);
+                                $startDate = \Carbon\Carbon::parse($p->valid_from)->startOfDay();
+                                $endDate = \Carbon\Carbon::parse($p->valid_until)->startOfDay();
+                                $daysLeft = max(0, (int) $today->diffInDays($endDate, false));
+                                $daysUntilStart = max(0, (int) $today->diffInDays($startDate, false));
+                                $daysEnded = max(0, (int) $endDate->diffInDays($today, false));
+                                $isExpired = $endDate->lt($today);
+                                $isNotStarted = $startDate->gt($today);
                                 $isActive = !$isExpired && !$isNotStarted && $p->is_active;
-                                $expiringSoon = $daysLeft <= 7 && $daysLeft > 0 && $isActive;
+                                $expiringSoon = $isActive && $daysLeft >= 1 && $daysLeft <= 7;
                             @endphp
                         <tr style="opacity: {{ $isExpired ? '0.6' : '1' }};">
                             <td><strong>{{ $p->code }}</strong></td>
@@ -186,17 +187,17 @@
                                 {{ $startDate->format('d M Y') }} → {{ $endDate->format('d M Y') }}
                                 <br/>
                                 @if($isNotStarted)
-                                    <span style="color:#f59e0b">Starts in {{ $startDate->diffInDays($now) }} days</span>
+                                    <span style="color:#f59e0b">Starts in {{ $daysUntilStart }} days</span>
                                 @endif
                             </td>
                             <td>
                                 <div class="status-cell">
                                     @if($isExpired)
                                         <span class="badge-expired">Expired</span>
-                                        <span class="status-info">(ended {{ $endDate->diffInDays($now) }} days ago)</span>
+                                        <span class="status-info">(ended {{ $daysEnded }} days ago)</span>
                                     @elseif($isNotStarted)
                                         <span style="background:#bfdbfe;color:#1e40af;padding:.25rem .7rem;border-radius:50px;font-size:.72rem;font-weight:600">Pending</span>
-                                        <span class="status-info">(starts in {{ $startDate->diffInDays($now) }} days)</span>
+                                        <span class="status-info">(starts in {{ $daysUntilStart }} days)</span>
                                     @elseif(!$p->is_active)
                                         <span class="badge-inactive">Inactive</span>
                                     @elseif($expiringSoon)
@@ -265,21 +266,41 @@ async function editPromo(id) {
     try {
         const response = await fetch(`/admin/promo/${id}/edit`);
         const promo = await response.json();
-        
+
         // Populate form
         document.getElementById('edit-promo-id').value = promo.id;
         document.getElementById('edit-promo-name').value = promo.name;
         document.getElementById('edit-discount').value = promo.discount_percent;
-        document.getElementById('edit-valid-from').value = promo.valid_from.split(' ')[0];
-        document.getElementById('edit-valid-until').value = promo.valid_until.split(' ')[0];
+        document.getElementById('edit-valid-from').value = formatDateInput(promo.valid_from);
+        document.getElementById('edit-valid-until').value = formatDateInput(promo.valid_until);
         document.getElementById('edit-promo-status').value = promo.is_active ? 'active' : 'inactive';
-        
+
         // Show modal
         document.getElementById('editPromoModal').style.display = 'flex';
     } catch (error) {
         alert('Error loading promo');
         console.error(error);
     }
+}
+
+function formatDateInput(value) {
+    if (!value) {
+        return '';
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return value;
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+        return String(value).slice(0, 10);
+    }
+
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = String(parsed.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 function closeEditModal() {
@@ -309,28 +330,28 @@ window.onclick = function(event) {
             
             <div>
                 <label style="display:block;font-size:.8rem;font-weight:600;color:#888;margin-bottom:.5rem">Promo Name</label>
-                <input type="text" id="edit-promo-name" style="width:100%;padding:.8rem 1rem;border:1px solid #EBEBEB;border-radius:8px;font-size:.9rem" required>
+                <input type="text" id="edit-promo-name" name="promo_name" style="width:100%;padding:.8rem 1rem;border:1px solid #EBEBEB;border-radius:8px;font-size:.9rem" required>
             </div>
             
             <div>
                 <label style="display:block;font-size:.8rem;font-weight:600;color:#888;margin-bottom:.5rem">Discount (%)</label>
-                <input type="number" id="edit-discount" min="1" max="100" style="width:100%;padding:.8rem 1rem;border:1px solid #EBEBEB;border-radius:8px;font-size:.9rem" required>
+                <input type="number" id="edit-discount" name="discount_percent" min="1" max="100" style="width:100%;padding:.8rem 1rem;border:1px solid #EBEBEB;border-radius:8px;font-size:.9rem" required>
             </div>
             
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
                 <div>
                     <label style="display:block;font-size:.8rem;font-weight:600;color:#888;margin-bottom:.5rem">Valid From</label>
-                    <input type="date" id="edit-valid-from" style="width:100%;padding:.8rem 1rem;border:1px solid #EBEBEB;border-radius:8px;font-size:.9rem" required>
+                    <input type="date" id="edit-valid-from" name="valid_from" style="width:100%;padding:.8rem 1rem;border:1px solid #EBEBEB;border-radius:8px;font-size:.9rem" required>
                 </div>
                 <div>
                     <label style="display:block;font-size:.8rem;font-weight:600;color:#888;margin-bottom:.5rem">Valid Until</label>
-                    <input type="date" id="edit-valid-until" style="width:100%;padding:.8rem 1rem;border:1px solid #EBEBEB;border-radius:8px;font-size:.9rem" required>
+                    <input type="date" id="edit-valid-until" name="valid_until" style="width:100%;padding:.8rem 1rem;border:1px solid #EBEBEB;border-radius:8px;font-size:.9rem" required>
                 </div>
             </div>
             
             <div>
                 <label style="display:block;font-size:.8rem;font-weight:600;color:#888;margin-bottom:.5rem">Status</label>
-                <select id="edit-promo-status" style="width:100%;padding:.8rem 1rem;border:1px solid #EBEBEB;border-radius:8px;font-size:.9rem" required>
+                <select id="edit-promo-status" name="promo_status" style="width:100%;padding:.8rem 1rem;border:1px solid #EBEBEB;border-radius:8px;font-size:.9rem" required>
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                 </select>

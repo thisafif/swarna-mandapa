@@ -415,6 +415,7 @@
 .cal-day{cursor:pointer}
 .cal-day.cal-booked{background:#fee2e2;color:#ef4444;cursor:not-allowed;font-weight:600}
 .cal-day.cal-pending{background:#fef9c3;color:#ca8a04;cursor:not-allowed;font-weight:600}
+.cal-day.cal-blocked{background:#e5e7eb;color:#4b5563;cursor:not-allowed;font-weight:600}
 
 
 </style>
@@ -505,7 +506,7 @@
                 <div class="row row-form">
                     <div class="col-md-6 mb-3 mb-md-0">
                         <label class="form-label">Email</label>
-                        <input type="email" class="form-control" name="email" value="{{ old('email') }}" placeholder="e.g. guest@example.com">
+                        <input type="email" class="form-control" name="email" value="{{ old('email') }}" placeholder="e.g. guest@example.com" required>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Notes</label>
@@ -712,8 +713,10 @@ function renderCal(which) {
 
         const isPast    = dateObj < minDate;
         const uStatus   = unavailDates[dateStr];
+        const blockedStatuses = ['BLOCKED', 'MAINTENANCE', 'HOLIDAY'];
         const isBooked  = uStatus === 'CONFIRMED';
         const isPending = uStatus === 'PENDING';
+        const isBlocked = blockedStatuses.includes(uStatus);
         const isSelCI   = dateStr === calState.selectedCI;
         const isSelCO   = dateStr === calState.selectedCO;
         const inRange   = calState.selectedCI && calState.selectedCO
@@ -740,6 +743,14 @@ function renderCal(which) {
             el.style.cursor     = 'not-allowed';
             const dot = document.createElement('span');
             dot.style.cssText = 'position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:#ef4444;display:block';
+            el.appendChild(dot);
+        } else if (isBlocked) {
+            el.style.background = '#e5e7eb';
+            el.style.color      = '#4b5563';
+            el.style.fontWeight = '600';
+            el.style.cursor     = 'not-allowed';
+            const dot = document.createElement('span');
+            dot.style.cssText = 'position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:#6b7280;display:block';
             el.appendChild(dot);
         } else if (isPending) {
             el.style.background = '#fef9c3';
@@ -794,6 +805,7 @@ function renderCal(which) {
     const legendItems = [
         { bg:'#fee2e2', border:'#ef4444', label:'Fully Booked' },
         { bg:'#fef9c3', border:'#eab308', label:'Pending'      },
+        { bg:'#e5e7eb', border:'#6b7280', label:'Blocked'      },
         { bg:'#b8924a', border:'',        label:'Selected'     },
     ];
     legendItems.forEach(li => {

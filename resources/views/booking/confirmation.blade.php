@@ -178,7 +178,7 @@
                         if (!empty($booking['check_in']) && !empty($booking['check_out'])) {
                             $nights = (new DateTime($booking['check_in']))->diff(new DateTime($booking['check_out']))->days;
                         }
-                        $pricePerNight = $booking['price_per_night'] ?? 5000000;
+                        $pricePerNight = $booking['price_per_night'] ?? 0;
                         $base          = $booking['subtotal']        ?? ($pricePerNight * $nights);
                         $discount      = $booking['discount_amount'] ?? 0;
                         $total         = $booking['total_price']     ?? ($base - $discount);

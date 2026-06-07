@@ -161,12 +161,21 @@
     @if ($errors->any())
         <div class="col-12 fade-up mb-2">
             <div class="p-3 rounded-3" style="background:#fef2f2; border:1px solid #fecaca; color:#dc2626; font-size:.85rem;">
-                <div class="fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill me-2"></i>Oops! Gagal lanjut ke pembayaran:</div>
+                <div class="fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill me-2"></i>Oops! We couldn’t continue to the payment page.</div>
                 <ul class="mb-0 ps-3">
                     @foreach ($errors->all() as $error)
                         <li>{{ $error }}</li>
                     @endforeach
                 </ul>
+            </div>
+        </div>
+    @endif
+
+    @if ($priceConfigMissing)
+        <div class="col-12 fade-up mb-2">
+            <div class="p-3 rounded-3" style="background:#fff8ed; border:1px solid #f0d9a0; color:#8b6914; font-size:.85rem;">
+                <div class="fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill me-2"></i>Booking is not yet available</div>
+                <div>The active villa price has not been configured yet. Please contact the admin before proceeding with the booking.</div>
             </div>
         </div>
     @endif
@@ -658,7 +667,7 @@
     {{-- Breakdown harga --}}
     <div id="s-breakdown" style="display:none">
         <div class="price-row">
-            <span>Rp 5.000.000 × <span id="s-nights">0</span> nights</span>
+            <span><span id="s-rate">{{ $pricePerNight ? 'Rp ' . number_format($pricePerNight, 0, ',', '.') : 'Price not configured' }}</span> × <span id="s-nights">0</span> nights</span>
             <span id="s-base">—</span>
         </div>
     </div>
@@ -713,9 +722,8 @@
 /* ══════════════════════════════════════════════════════════
    CONFIG
 ══════════════════════════════════════════════════════════ */
-const RATE = 5000000;
+const RATE = @json($pricePerNight);
 let promoDiscount = 0;
-const PROMOS = { 'WELCOME10': .10, 'SWARNA20': .20, 'BALI15': .15 };
 const idr  = n => 'Rp ' + Math.round(n).toLocaleString('id-ID').replace(/,/g, '.');
 const fmtD = s => {
     if (!s) return '— select';
@@ -937,8 +945,10 @@ function renderCal(which) {
  
         const isPast    = dateObj < minDate;
         const uStatus   = unavailDates[dateStr];
+        const blockedStatuses = ['BLOCKED', 'MAINTENANCE', 'HOLIDAY'];
         const isBooked  = uStatus === 'CONFIRMED';
         const isPending = uStatus === 'PENDING';
+        const isBlocked = blockedStatuses.includes(uStatus);
         const isSelCI   = dateStr === calState.selectedCI;
         const isSelCO   = dateStr === calState.selectedCO;
         const inRange   = calState.selectedCI && calState.selectedCO
@@ -966,6 +976,14 @@ function renderCal(which) {
             el.style.cursor     = 'not-allowed';
             const dot = document.createElement('span');
             dot.style.cssText = 'position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:#ef4444;display:block';
+            el.appendChild(dot);
+        } else if (isBlocked) {
+            el.style.background = '#e5e7eb';
+            el.style.color      = '#4b5563';
+            el.style.fontWeight = '600';
+            el.style.cursor     = 'not-allowed';
+            const dot = document.createElement('span');
+            dot.style.cssText = 'position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:#6b7280;display:block';
             el.appendChild(dot);
         } else if (isPending) {
             el.style.background = '#fef9c3';
@@ -1021,6 +1039,7 @@ function renderCal(which) {
     const legendItems = [
         { bg:'#fee2e2', border:'#ef4444', label:'Fully Booked' },
         { bg:'#fef9c3', border:'#eab308', label:'Pending'      },
+        { bg:'#e5e7eb', border:'#6b7280', label:'Blocked'      },
         { bg:'#b8924a', border:'',        label:'Selected'     },
     ];
     legendItems.forEach(li => {
@@ -1143,6 +1162,11 @@ function calc() {
  
     const nights = Math.round((new Date(co) - new Date(ci)) / 86400000);
     if (nights <= 0) return;
+    if (!RATE) {
+        document.getElementById('s-breakdown').style.display = 'none';
+        document.getElementById('s-total').textContent = 'Unavailable';
+        return;
+    }
  
     const minNightWarn = document.getElementById('min-night-warn');
     if (nights < 2) {
@@ -1176,23 +1200,52 @@ function calc() {
 /* ══════════════════════════════════════════════════════════
    PROMO
 ══════════════════════════════════════════════════════════ */
-function applyPromo() {
+async function applyPromo() {
     const code = document.getElementById('promo-inp').value.trim().toUpperCase();
     const el   = document.getElementById('promo-msg');
     el.style.display = 'block';
-    if (PROMOS[code]) {
-        promoDiscount = PROMOS[code];
-        el.style.color = 'var(--success)';
-        el.innerHTML   = `<i class="bi bi-check-circle me-1"></i>Promo applied! ${promoDiscount * 100}% off.`;
-        document.getElementById('promo-code-hidden').value     = code;
-        document.getElementById('promo-discount-hidden').value = promoDiscount;
-        calc();
-    } else {
+    if (!code) {
         promoDiscount = 0;
         document.getElementById('promo-code-hidden').value     = '';
         document.getElementById('promo-discount-hidden').value = '0';
         el.style.color = 'var(--danger)';
-        el.innerHTML   = '<i class="bi bi-x-circle me-1"></i>Invalid promo code.';
+        el.innerHTML   = '<i class="bi bi-x-circle me-1"></i>Please enter a promo code.';
+        calc();
+        return;
+    }
+
+    try {
+        const response = await fetch('{{ route('booking.applyPromo') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                promo_code: code,
+                check_in: document.getElementById('check_in').value,
+            }),
+        });
+        const data = await response.json();
+
+        if (!response.ok || !data.valid) {
+            throw new Error(data.message || 'Invalid promo code.');
+        }
+
+        promoDiscount = Number(data.discount_percent) / 100;
+        el.style.color = 'var(--success)';
+        el.innerHTML   = `<i class="bi bi-check-circle me-1"></i>${data.message}`;
+        document.getElementById('promo-code-hidden').value     = code;
+        document.getElementById('promo-discount-hidden').value = promoDiscount;
+        calc();
+    } catch (error) {
+        promoDiscount = 0;
+        document.getElementById('promo-code-hidden').value     = '';
+        document.getElementById('promo-discount-hidden').value = '0';
+        el.style.color = 'var(--danger)';
+        el.innerHTML   = `<i class="bi bi-x-circle me-1"></i>${error.message}`;
+        calc();
     }
 }
  
@@ -1327,6 +1380,12 @@ document.getElementById('booking-form').addEventListener('submit', function (e) 
         if (firstErr) {
             firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
+        return;
+    }
+
+    if (!RATE) {
+        e.preventDefault();
+        alert('The active villa price has not been configured yet. Please contact the admin.');
         return;
     }
 

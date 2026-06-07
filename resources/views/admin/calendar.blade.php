@@ -167,6 +167,14 @@
         border-color: #F5A5A5;
     }
 
+    .day-box.blocked {
+        background: #E5E7EB;
+        border-color: #CBD5E1;
+    }
+    .day-box.blocked .day-number {
+        color: #4B5563;
+    }
+
     .legend-box.available {
         background-color: #FFFFFF;
         border-color: #F0F0F0;
@@ -307,6 +315,7 @@
 
                     // Check status dari data
                     const isBooked = calendarData.booked && calendarData.booked[dateStr];
+                    const isBlocked = calendarData.blocked && calendarData.blocked[dateStr];
                     const isRealToday = (realToday.getFullYear() === year && realToday.getMonth() === month && realToday.getDate() === day);
 
                     let classes = "day-box";
@@ -315,6 +324,9 @@
                     if (isBooked) {
                         classes += " booked";
                         title = `Booked (${isBooked.status})`;
+                    } else if (isBlocked) {
+                        classes += " blocked";
+                        title = isBlocked.reason ? `Blocked (${isBlocked.reason})` : `Blocked (${isBlocked.status})`;
                     }
 
                     // Cute little gold dot indicator for "Today"
@@ -372,6 +384,10 @@
         <div class="legend-item">
             <div class="legend-box booked"></div>
             <span>📅 Booked (Reservation)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-box blocked"></div>
+            <span>Blocked / Maintenance</span>
         </div>
     </div>
 @endsection

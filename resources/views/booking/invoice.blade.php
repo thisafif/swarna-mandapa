@@ -161,7 +161,7 @@
                       : trim(session('booking.first_name','Guest').' '.session('booking.last_name',''));
 
     $total         = isset($booking->total_price) ? (int) $booking->total_price : 0;
-    $pricePerNight = isset($booking->price_per_night) ? (int) $booking->price_per_night : 5000000;
+    $pricePerNight = isset($booking->price_per_night) ? (int) $booking->price_per_night : 0;
     $discount      = isset($booking->discount_amount) ? (int) $booking->discount_amount : 0;
     $promoCode     = $booking->promo_code ?? null;
 

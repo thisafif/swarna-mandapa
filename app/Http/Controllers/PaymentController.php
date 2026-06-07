@@ -13,14 +13,24 @@ use Illuminate\Support\Str;
 class PaymentController extends Controller
 {
     private string $baseUrl;
+
     private string $clientId;
+
     private string $secretKey;
 
     public function __construct()
     {
-        $this->baseUrl   = rtrim(trim(env('DOKU_BASE_URL', 'https://api-sandbox.doku.com')), '/');
-        $this->clientId  = preg_replace('/\s+/', '', env('DOKU_CLIENT_ID', ''));
+        $this->baseUrl = rtrim(trim(env('DOKU_BASE_URL', '')), '/');
+        $this->clientId = preg_replace('/\s+/', '', env('DOKU_CLIENT_ID', ''));
         $this->secretKey = preg_replace('/\s+/', '', env('DOKU_SECRET_KEY', ''));
+
+        if (! $this->baseUrl && ! app()->environment('production')) {
+            $this->baseUrl = 'https://api-sandbox.doku.com';
+        }
+
+        if (app()->environment('production') && $this->hasInvalidProductionConfig()) {
+            throw new \RuntimeException('Konfigurasi DOKU production belum lengkap atau masih memakai sandbox/placeholder.');
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -30,11 +40,11 @@ class PaymentController extends Controller
     public function createPayment(Request $request)
     {
         $request->validate([
-            'payment_method'  => 'required|in:CREDIT_CARD,VIRTUAL_ACCOUNT,EWALLET',
+            'payment_method' => 'required|in:CREDIT_CARD,VIRTUAL_ACCOUNT,EWALLET',
             'payment_channel' => 'nullable|string',
         ]);
 
-        $code    = session('booking_code');
+        $code = session('booking_code');
         $booking = $code ? Booking::where('booking_code', $code)->first() : null;
 
         if (! $booking) {
@@ -49,25 +59,28 @@ class PaymentController extends Controller
 
         if ($booking->expires_at && now()->gt($booking->expires_at)) {
             $booking->update(['status' => 'CANCELLED']);
+
             return redirect()->route('booking.status', ['code' => $booking->booking_code])
                 ->withErrors(['payment' => 'Waktu pembayaran telah habis. Booking dibatalkan.']);
         }
 
-        $grandTotal    = (int) $booking->total_price;
-        $orderId       = 'INV' . time() . rand(100, 999);
+        $grandTotal = (int) $booking->total_price;
+        $orderId = 'INV'.time().rand(100, 999);
         $diffInMinutes = (int) now()->diffInMinutes($booking->expires_at, false);
-        $dueMinutes    = $diffInMinutes > 0 ? $diffInMinutes : 1;
+        $dueMinutes = $diffInMinutes > 0 ? $diffInMinutes : 1;
 
         $booking->update(['payment_order_id' => $orderId]);
 
         try {
             $checkoutUrl = $this->createCheckoutSession($booking, $orderId, $grandTotal, $dueMinutes);
+
             return redirect($checkoutUrl);
         } catch (\Exception $e) {
             Log::error('[DOKU] createPayment failed', [
                 'booking_code' => $booking->booking_code,
-                'error'        => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
+
             return redirect()->route('booking.invoice')
                 ->withErrors(['payment' => $e->getMessage()]);
         }
@@ -79,51 +92,52 @@ class PaymentController extends Controller
     // -------------------------------------------------------------------------
 
     public function returnPage(Request $request)
-{
-    // DOKU redirect ke sini setelah user klik "GO TO MERCHANT"
-    // HARUS verify ke DOKU API bahwa payment benar-benar SUCCESS
-    
-    $orderId = $request->query('order_id') ?? session('payment_order_id');
-    $code    = $request->query('booking_code') ?? session('booking_code');
-    
-    if (! $orderId || ! $code) {
-        return redirect()->route('booking.form');
-    }
-    
-    $booking = Booking::where('booking_code', $code)->first();
-    if (! $booking) {
-        return redirect()->route('booking.form');
-    }
-    
-    // Kalau sudah CONFIRMED, langsung ke status
-    if ($booking->status === 'CONFIRMED') {
-        $this->sendConfirmationEmail($booking);
-        return redirect()->route('booking.status', ['code' => $booking->booking_code]);
-    }
-    
-    // PENDING - verify ke DOKU API bahwa payment benar-benar sukses
-    if ($booking->status === 'PENDING') {
-        // Check payment status ke DOKU
-        $isPaymentSuccess = $this->checkPaymentStatus($orderId);
-        
-        if ($isPaymentSuccess) {
-            // Payment confirmed - update status
-            $booking->update([
-                'status'  => 'CONFIRMED',
-                'paid_at' => now(),
-            ]);
-            $booking->refresh();
-            $this->sendConfirmationEmail($booking);
-            return redirect()->route('booking.status', ['code' => $booking->booking_code]);
-        } else {
-            // Payment BELUM berhasil - redirect ke pending page
-            return redirect()->route('booking.pending', ['code' => $booking->booking_code]);
+    {
+        // DOKU redirect ke sini setelah user klik "GO TO MERCHANT"
+        // HARUS verify ke DOKU API bahwa payment benar-benar SUCCESS
+
+        $orderId = $request->query('order_id') ?? session('payment_order_id');
+        $code = $request->query('booking_code') ?? session('booking_code');
+
+        if (! $orderId || ! $code) {
+            return redirect()->route('booking.form');
         }
+
+        $booking = Booking::where('booking_code', $code)->first();
+        if (! $booking) {
+            return redirect()->route('booking.form');
+        }
+
+        // Kalau sudah CONFIRMED, langsung ke status
+        if ($booking->status === 'CONFIRMED') {
+            $this->sendConfirmationEmail($booking);
+
+            return redirect()->route('booking.status', ['code' => $booking->booking_code]);
+        }
+
+        // PENDING - verify ke DOKU API bahwa payment benar-benar sukses
+        if ($booking->status === 'PENDING') {
+            // Check payment status ke DOKU
+            $isPaymentSuccess = $this->checkPaymentStatus($orderId);
+
+            if ($isPaymentSuccess) {
+                // Payment confirmed - update status
+                $booking->update([
+                    'status' => 'CONFIRMED',
+                    'paid_at' => now(),
+                ]);
+                $booking->refresh();
+                $this->sendConfirmationEmail($booking);
+
+                return redirect()->route('booking.status', ['code' => $booking->booking_code]);
+            } else {
+                // Payment BELUM berhasil - redirect ke pending page
+                return redirect()->route('booking.pending', ['code' => $booking->booking_code]);
+            }
+        }
+
+        return redirect()->route('booking.invoice');
     }
-    
-    return redirect()->route('booking.invoice');
-}
- 
 
     // -------------------------------------------------------------------------
     // PUBLIC: Callback dari DOKU (server-to-server)
@@ -135,11 +149,12 @@ class PaymentController extends Controller
 
         if (! $this->validateNotificationSignature($request, $rawBody)) {
             Log::warning('[DOKU] callback: invalid signature');
+
             return response()->json(['responseCode' => '4010000', 'responseMessage' => 'Unauthorized'], 401);
         }
 
-        $payload           = json_decode($rawBody, true) ?? [];
-        $orderId           = data_get($payload, 'order.invoice_number');
+        $payload = json_decode($rawBody, true) ?? [];
+        $orderId = data_get($payload, 'order.invoice_number');
         $transactionStatus = strtoupper(data_get($payload, 'transaction.status', ''));
 
         if (! $orderId) {
@@ -152,14 +167,14 @@ class PaymentController extends Controller
         }
 
         $newStatus = match ($transactionStatus) {
-            'SUCCESS'           => 'CONFIRMED',
+            'SUCCESS' => 'CONFIRMED',
             'EXPIRED', 'FAILED' => 'CANCELLED',
-            default             => $booking->status,
+            default => $booking->status,
         };
 
         $booking->update([
-            'status'     => $newStatus,
-            'paid_at'    => $transactionStatus === 'SUCCESS' ? now() : $booking->paid_at,
+            'status' => $newStatus,
+            'paid_at' => $transactionStatus === 'SUCCESS' ? now() : $booking->paid_at,
             'payment_id' => data_get($payload, 'transaction.id', $booking->payment_id),
         ]);
 
@@ -169,8 +184,8 @@ class PaymentController extends Controller
         }
 
         Log::info('[DOKU] callback processed', [
-            'order_id'   => $orderId,
-            'tx_status'  => $transactionStatus,
+            'order_id' => $orderId,
+            'tx_status' => $transactionStatus,
             'new_status' => $newStatus,
         ]);
 
@@ -184,36 +199,36 @@ class PaymentController extends Controller
     private function checkPaymentStatus(string $orderId): bool
     {
         try {
-            $path      = '/orders/v1/status/' . $orderId;
+            $path = '/orders/v1/status/'.$orderId;
             $timestamp = now()->utc()->format('Y-m-d\TH:i:s\Z');
             $requestId = (string) Str::uuid();
 
             // GET request — tidak ada body/digest
             $componentToSign =
-                "Client-Id:{$this->clientId}\n" .
-                "Request-Id:{$requestId}\n" .
-                "Request-Timestamp:{$timestamp}\n" .
+                "Client-Id:{$this->clientId}\n".
+                "Request-Id:{$requestId}\n".
+                "Request-Timestamp:{$timestamp}\n".
                 "Request-Target:{$path}";
 
-            $signature = 'HMACSHA256=' . base64_encode(
+            $signature = 'HMACSHA256='.base64_encode(
                 hash_hmac('sha256', $componentToSign, $this->secretKey, true)
             );
 
             $response = Http::timeout(15)
                 ->withHeaders([
-                    'Client-Id'         => $this->clientId,
-                    'Request-Id'        => $requestId,
+                    'Client-Id' => $this->clientId,
+                    'Request-Id' => $requestId,
                     'Request-Timestamp' => $timestamp,
-                    'Signature'         => $signature,
+                    'Signature' => $signature,
                 ])
-                ->get($this->baseUrl . $path);
+                ->get($this->baseUrl.$path);
 
             $result = $response->json() ?? [];
 
             Log::info('[DOKU] checkPaymentStatus', [
                 'order_id' => $orderId,
-                'status'   => $response->status(),
-                'body'     => $result,
+                'status' => $response->status(),
+                'body' => $result,
             ]);
 
             $txStatus = strtoupper(
@@ -226,6 +241,7 @@ class PaymentController extends Controller
 
         } catch (\Exception $e) {
             Log::warning('[DOKU] checkPaymentStatus error', ['error' => $e->getMessage()]);
+
             return false;
         }
     }
@@ -240,61 +256,61 @@ class PaymentController extends Controller
         int $grandTotal,
         int $dueMinutes
     ): string {
-        $path      = '/checkout/v1/payment';
+        $path = '/checkout/v1/payment';
         $timestamp = now()->utc()->format('Y-m-d\TH:i:s\Z');
         $requestId = (string) Str::uuid();
-        $phone     = $this->normalizePhone($booking->phone);
+        $phone = $this->normalizePhone($booking->phone);
 
         $payload = [
             'order' => [
                 'invoice_number' => $orderId,
-                'amount'         => $grandTotal,
-                'currency'       => 'IDR',
-                'callback_url'   => url('/payment/return?order_id='.$orderId.'&booking_code='.$booking->booking_code),
+                'amount' => $grandTotal,
+                'currency' => 'IDR',
+                'callback_url' => url('/payment/return?order_id='.$orderId.'&booking_code='.$booking->booking_code),
             ],
             'payment' => [
                 'payment_due_date' => $dueMinutes,
             ],
             'customer' => [
-                'name'  => trim($booking->first_name . ' ' . $booking->last_name),
+                'name' => trim($booking->first_name.' '.$booking->last_name),
                 'email' => $booking->email,
                 'phone' => $phone,
             ],
         ];
 
         $jsonBody = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-        $digest   = base64_encode(hash('sha256', $jsonBody, true));
+        $digest = base64_encode(hash('sha256', $jsonBody, true));
 
         $componentToSign =
-            "Client-Id:{$this->clientId}\n" .
-            "Request-Id:{$requestId}\n" .
-            "Request-Timestamp:{$timestamp}\n" .
-            "Request-Target:{$path}\n" .
+            "Client-Id:{$this->clientId}\n".
+            "Request-Id:{$requestId}\n".
+            "Request-Timestamp:{$timestamp}\n".
+            "Request-Target:{$path}\n".
             "Digest:{$digest}";
 
-        $signature = 'HMACSHA256=' . base64_encode(
+        $signature = 'HMACSHA256='.base64_encode(
             hash_hmac('sha256', $componentToSign, $this->secretKey, true)
         );
 
         Log::info('[DOKU] createCheckout request', [
-            'order_id'   => $orderId,
+            'order_id' => $orderId,
             'request_id' => $requestId,
-            'timestamp'  => $timestamp,
+            'timestamp' => $timestamp,
         ]);
 
         $response = Http::timeout(30)
             ->withHeaders([
-                'Content-Type'      => 'application/json',
-                'Client-Id'         => $this->clientId,
-                'Request-Id'        => $requestId,
+                'Content-Type' => 'application/json',
+                'Client-Id' => $this->clientId,
+                'Request-Id' => $requestId,
                 'Request-Timestamp' => $timestamp,
-                'Signature'         => $signature,
+                'Signature' => $signature,
             ])
             ->withBody($jsonBody, 'application/json')
-            ->post($this->baseUrl . $path);
+            ->post($this->baseUrl.$path);
 
         $statusCode = $response->status();
-        $result     = $response->json() ?? [];
+        $result = $response->json() ?? [];
 
         Log::info('[DOKU] createCheckout response', ['status_code' => $statusCode, 'body' => $result]);
 
@@ -308,7 +324,9 @@ class PaymentController extends Controller
                 ?? data_get($result, 'error.message')
                 ?? data_get($result, 'message')
                 ?? 'Gagal membuat sesi pembayaran.';
-            if (is_array($errMsg)) $errMsg = implode(', ', $errMsg);
+            if (is_array($errMsg)) {
+                $errMsg = implode(', ', $errMsg);
+            }
             throw new \Exception("DOKU Error [{$statusCode}]: {$errMsg}");
         }
 
@@ -321,7 +339,9 @@ class PaymentController extends Controller
 
     private function sendConfirmationEmail(Booking $booking): void
     {
-        if ($booking->email_sent_at) return;
+        if ($booking->email_sent_at) {
+            return;
+        }
 
         try {
             Mail::to($booking->email)->send(new BookingConfirmedMail($booking));
@@ -338,22 +358,22 @@ class PaymentController extends Controller
 
     private function validateNotificationSignature(Request $request, string $rawBody): bool
     {
-        $clientId  = $request->header('Client-Id', '');
+        $clientId = $request->header('Client-Id', '');
         $requestId = $request->header('Request-Id', '');
         $timestamp = $request->header('Request-Timestamp', '');
         $signature = $request->header('Signature', '');
-        $path      = $request->getPathInfo();
+        $path = $request->getPathInfo();
 
         $digest = base64_encode(hash('sha256', $rawBody, true));
 
         $componentToSign =
-            "Client-Id:{$clientId}\n" .
-            "Request-Id:{$requestId}\n" .
-            "Request-Timestamp:{$timestamp}\n" .
-            "Request-Target:{$path}\n" .
+            "Client-Id:{$clientId}\n".
+            "Request-Id:{$requestId}\n".
+            "Request-Timestamp:{$timestamp}\n".
+            "Request-Target:{$path}\n".
             "Digest:{$digest}";
 
-        $expected = 'HMACSHA256=' . base64_encode(
+        $expected = 'HMACSHA256='.base64_encode(
             hash_hmac('sha256', $componentToSign, $this->secretKey, true)
         );
 
@@ -367,9 +387,28 @@ class PaymentController extends Controller
     private function normalizePhone(string $raw): string
     {
         $phone = preg_replace('/[^0-9+]/', '', trim($raw));
-        if (str_starts_with($phone, '+62')) return $phone;
-        if (str_starts_with($phone, '62'))  return '+' . $phone;
-        if (str_starts_with($phone, '0'))   return '+62' . substr($phone, 1);
-        return '+62' . $phone;
+        if (str_starts_with($phone, '+62')) {
+            return $phone;
+        }
+        if (str_starts_with($phone, '62')) {
+            return '+'.$phone;
+        }
+        if (str_starts_with($phone, '0')) {
+            return '+62'.substr($phone, 1);
+        }
+
+        return '+62'.$phone;
+    }
+
+    private function hasInvalidProductionConfig(): bool
+    {
+        $baseUrl = strtolower($this->baseUrl);
+
+        return ! $this->baseUrl
+            || ! $this->clientId
+            || ! $this->secretKey
+            || str_contains($baseUrl, 'sandbox')
+            || str_contains($this->clientId, 'your_')
+            || str_contains($this->secretKey, 'your_');
     }
 }
