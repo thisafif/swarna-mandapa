@@ -37,6 +37,7 @@ class BookingController extends Controller
             'phone' => 'required|string|max:20',
             'country' => 'nullable|string|max:5',
             'promo_code' => 'nullable|string|max:50',
+            'special_requests' => 'nullable|string|max:1000',
         ]);
 
         if (! $this->isDateAvailable($request->check_in, $request->check_out)) {
@@ -117,6 +118,7 @@ class BookingController extends Controller
             'total_price' => $data['total_price'],
             'status' => 'PENDING',
             'expires_at' => now()->addHour(),
+            'notes' => $data['special_requests'] ?? null,
         ]);
 
         session(['booking_code' => $booking->booking_code]);
@@ -360,6 +362,7 @@ class BookingController extends Controller
                 'total_price',
                 'promo_code',
                 'is_manual',
+                'notes',
             ]);
 
         $bookedDates = [];
@@ -509,6 +512,7 @@ class BookingController extends Controller
             'total_price' => (float) $booking->total_price,
             'promo_code' => $booking->promo_code,
             'is_manual' => (bool) $booking->is_manual,
+            'notes' => $booking->notes,
             'nightly_price_breakdown' => $booking->nightly_price_breakdown ?? [],
         ];
     }

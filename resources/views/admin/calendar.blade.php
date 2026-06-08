@@ -555,6 +555,13 @@
                         </div>
                     </div>
 
+                    ${String(bookingData.notes || '').trim() ? `
+                        <div class="dp-section">
+                            <div class="dp-label">Notes</div>
+                            <div class="dp-card" style="color:#555; line-height:1.6; white-space:pre-line;">${escapeHtml(String(bookingData.notes || '').trim())}</div>
+                        </div>
+                    ` : ''}
+
                     <hr class="dp-divider">
 
                     <div class="dp-section">

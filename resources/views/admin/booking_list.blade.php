@@ -591,6 +591,11 @@
             </div>
 
             <div class="dp-section">
+                <div class="dp-label">Notes</div>
+                <div class="p-3" style="background:#FDFBF7; border:1px solid #EBE4D5; border-radius:8px; color:#555; font-size:0.9rem; line-height:1.6; white-space:pre-line;" id="dp-notes">-</div>
+            </div>
+
+            <div class="dp-section">
                 <div class="dp-label">Stay Details</div>
                 <div class="dp-value-group mb-3">
                     <div>
@@ -720,6 +725,11 @@
                         <option value="CONFIRMED">CONFIRMED</option>
                         <option value="CANCELLED">CANCELLED</option>
                     </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">View Notes</label>
+                    <textarea id="editViewNotes" class="form-control" rows="4" style="padding: 0.75rem; border-radius: 8px; border: 1px solid #DDD; background:#FDFBF7; color:#555;" readonly></textarea>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 2rem;">
@@ -871,6 +881,8 @@ Swarna Mandapa Reservations`;
                 document.getElementById('dp-check-in').textContent = checkIn.toLocaleDateString('en-US', options);
                 document.getElementById('dp-check-out').textContent = checkOut.toLocaleDateString('en-US', options);
                 document.getElementById('dp-guests').textContent = bookingData.guests;
+                const notes = String(bookingData.notes || '').trim();
+                document.getElementById('dp-notes').textContent = notes || '-';
                 renderBookingPriceDetail(bookingData, nights);
                 
                 document.getElementById('detailBackdrop').classList.add('show');
@@ -953,6 +965,7 @@ Swarna Mandapa Reservations`;
             document.getElementById('editPricePerNight').value = bookingData.price_per_night;
             document.getElementById('editDiscountAmount').value = bookingData.discount_amount;
             document.getElementById('editStatus').value = bookingData.status;
+            document.getElementById('editViewNotes').value = String(bookingData.notes || '').trim() || '-';
             
             // Show edit modal and hide detail panel
             document.getElementById('editBackdrop').classList.add('show');
