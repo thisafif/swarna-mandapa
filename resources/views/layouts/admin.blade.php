@@ -208,6 +208,177 @@
             cursor: pointer;
         }
 
+        .notification-button {
+            position: relative;
+            border: 0;
+            background: transparent;
+            padding: 0.35rem;
+            line-height: 1;
+            color: var(--text-dark);
+        }
+
+        .notification-button::after {
+            display: none;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 5px;
+            border-radius: 999px;
+            background: #E05A5A;
+            color: #FFFFFF;
+            font-size: 0.65rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transform: translate(35%, -35%);
+        }
+
+        .notification-menu {
+            width: 360px;
+            max-width: calc(100vw - 2rem);
+            border: 1px solid rgba(0,0,0,0.06);
+            border-radius: 12px;
+            padding: 0;
+            box-shadow: 0 14px 40px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        .notification-header {
+            padding: 1rem 1.1rem;
+            border-bottom: 1px solid #F0F0F0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .notification-title {
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-dark);
+        }
+
+        .notification-count {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #E05A5A;
+        }
+
+        .notification-list {
+            max-height: 360px;
+            overflow-y: auto;
+        }
+
+        .notification-item {
+            display: flex;
+            gap: 0.8rem;
+            padding: 0.95rem 1.1rem;
+            color: var(--text-dark);
+            text-decoration: none;
+            border-bottom: 1px solid #F5F5F5;
+        }
+
+        .notification-item:hover {
+            background: #FDFBF7;
+            color: var(--text-dark);
+        }
+
+        .notification-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            background: #FEF3C7;
+            color: #A67C37;
+        }
+
+        .notification-text {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .notification-primary {
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-bottom: 0.2rem;
+        }
+
+        .notification-secondary {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            line-height: 1.35;
+        }
+
+        .notification-empty {
+            padding: 2rem 1rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .notification-footer {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            border-top: 1px solid #F0F0F0;
+        }
+
+        .notification-footer a {
+            padding: 0.8rem;
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--brand-gold-dark);
+            text-decoration: none;
+        }
+
+        .notification-read-form {
+            margin: 0;
+        }
+
+        .notification-read-button {
+            width: 100%;
+            height: 100%;
+            border: 0;
+            background: transparent;
+            padding: 0.8rem;
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+
+        .notification-read-button:not(:disabled) {
+            color: var(--brand-gold-dark);
+        }
+
+        .notification-read-button:not(:disabled):hover {
+            background: #FDFBF7;
+        }
+
+        .notification-read-button:disabled {
+            cursor: not-allowed;
+        }
+
+        .notification-footer a:first-child,
+        .notification-read-form {
+            border-right: 1px solid #F0F0F0;
+        }
+
+        .notification-footer a:hover {
+            background: #FDFBF7;
+        }
+
         .header-divider {
             width: 1px;
             height: 24px;
@@ -300,6 +471,9 @@
             .profile-info { display: none; }
             .page-content { padding: 1.25rem; }
             .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+            .notification-menu {
+                width: calc(100vw - 2rem);
+            }
         }
     </style>
     @stack('styles')
@@ -345,7 +519,74 @@
         <header class="top-header">
             <i class="bi bi-list mobile-toggle d-lg-none" onclick="toggleSidebar()"></i>
             <div class="top-header-inner">
-                <i class="bi bi-bell notification-bell"></i>
+                @php
+                    $confirmedNotificationsReadAt = session('admin_confirmed_notifications_read_at');
+                    $confirmedNotificationQuery = \App\Models\Booking::where('status', 'CONFIRMED');
+
+                    if ($confirmedNotificationsReadAt) {
+                        $confirmedNotificationQuery->where('updated_at', '>', $confirmedNotificationsReadAt);
+                    }
+
+                    $confirmedBookingNotifications = (clone $confirmedNotificationQuery)
+                        ->orderByDesc('updated_at')
+                        ->take(5)
+                        ->get();
+                    $adminNotificationCount = (clone $confirmedNotificationQuery)->count();
+                @endphp
+
+                <div class="dropdown">
+                    <button
+                        class="notification-button dropdown-toggle"
+                        type="button"
+                        id="adminNotificationDropdown"
+                        data-bs-toggle="dropdown"
+                        data-bs-auto-close="outside"
+                        aria-expanded="false"
+                        aria-label="Admin notifications"
+                    >
+                        <i class="bi bi-bell notification-bell"></i>
+                        @if($adminNotificationCount > 0)
+                            <span class="notification-badge">{{ $adminNotificationCount > 99 ? '99+' : $adminNotificationCount }}</span>
+                        @endif
+                    </button>
+
+                    <div class="dropdown-menu dropdown-menu-end notification-menu" aria-labelledby="adminNotificationDropdown">
+                        <div class="notification-header">
+                            <div class="notification-title">Notifications</div>
+                            <div class="notification-count">{{ $adminNotificationCount }} unread confirmed</div>
+                        </div>
+
+                        <div class="notification-list">
+                            @forelse($confirmedBookingNotifications as $booking)
+                                <a class="notification-item" href="{{ route('admin.booking_list', ['status' => 'confirmed']) }}">
+                                    <span class="notification-icon"><i class="bi bi-calendar-check"></i></span>
+                                    <span class="notification-text">
+                                        <span class="notification-primary">Booking confirmed</span>
+                                        <span class="notification-secondary">
+                                            {{ $booking->booking_code }} - {{ trim($booking->first_name . ' ' . $booking->last_name) ?: 'Guest' }}
+                                            @if($booking->updated_at)
+                                                <br>{{ $booking->updated_at->diffForHumans() }}
+                                            @endif
+                                        </span>
+                                    </span>
+                                </a>
+                            @empty
+                            @endforelse
+
+                            @if($adminNotificationCount === 0)
+                                <div class="notification-empty">No unread confirmed bookings.</div>
+                            @endif
+                        </div>
+
+                        <div class="notification-footer">
+                            <form class="notification-read-form" action="{{ route('admin.notifications.read_all') }}" method="POST">
+                                @csrf
+                                <button type="submit" class="notification-read-button" {{ $adminNotificationCount === 0 ? 'disabled' : '' }}>Read all</button>
+                            </form>
+                            <a href="{{ route('admin.booking_list', ['status' => 'confirmed']) }}">Confirmed bookings</a>
+                        </div>
+                    </div>
+                </div>
                 <div class="header-divider"></div>
                 <div class="user-profile">
                     <div class="profile-info">

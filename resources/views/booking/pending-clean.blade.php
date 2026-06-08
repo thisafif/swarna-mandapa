@@ -268,7 +268,13 @@
     $ci     = $booking->check_in  ?? null;
     $co     = $booking->check_out ?? null;
     $nights = ($ci && $co) ? (new DateTime($ci))->diff(new DateTime($co))->days : 0;
-    $base   = $pricePerNight * $nights;
+    $nightlyBreakdown = $booking->nightly_price_breakdown ?? [];
+    $base = $nightlyBreakdown
+        ? collect($nightlyBreakdown)->sum(fn ($night) => (int) ($night['price'] ?? 0))
+        : $pricePerNight * $nights;
+    if ($total > 0 && $base === 0) {
+        $base = $total + $discount;
+    }
 @endphp
 
 <div class="pending-container">

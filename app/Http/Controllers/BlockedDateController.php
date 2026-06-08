@@ -34,7 +34,7 @@ class BlockedDateController extends Controller
             'type' => $data['type'] ?? 'blocked',
         ]);
 
-        return redirect()->route('admin.manual_booking')->with('success', 'Blocked date range berhasil disimpan.');
+        return redirect()->route('admin.manual_booking')->with('success', 'Blocked date range successfully saved.');
     }
 
     public function update(Request $request, BlockedDate $blockedDate)
@@ -53,12 +53,12 @@ class BlockedDateController extends Controller
             'type' => $data['type'] ?? 'blocked',
         ]);
 
-        return redirect()->route('admin.manual_booking')->with('success', 'Blocked date range berhasil diupdate.');
+        return redirect()->route('admin.manual_booking')->with('success', 'Blocked date range successfully updated.');
     }
 
     public function destroy(BlockedDate $blockedDate)
     {
         $blockedDate->delete();
-        return redirect()->route('admin.manual_booking')->with('success', 'Blocked date range berhasil dihapus.');
+        return redirect()->route('admin.manual_booking')->with('success', 'Blocked date range successfully deleted.');
     }
 }

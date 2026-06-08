@@ -1,21 +1,26 @@
 <?php
 
-use App\Http\Controllers\BookingController;
-use App\Http\Controllers\BlockedDateController;
-use App\Http\Controllers\PromoController;
-use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\AdminAuthController;
-use App\Models\Booking;
+use App\Http\Controllers\BlockedDateController;
+use App\Http\Controllers\BookingController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PromoController;
+use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\VillaPriceController;
 use App\Models\Admin;
+use App\Models\Booking;
+use App\Models\GuestReview;
+use App\Models\Promo;
+use App\Models\VillaPrice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\Rule;
-use App\Http\Controllers\ReviewController;
 
 Route::get('/', function () {
-    $testimonials = \App\Models\GuestReview::where('status', 'approved')
-                        ->latest()
-                        ->get();
+    $testimonials = GuestReview::where('status', 'approved')
+        ->latest()
+        ->get();
+
     return view('index', compact('testimonials'));
 });
 
@@ -50,13 +55,39 @@ Route::post('/admin/login', [AdminAuthController::class, 'login'])->name('admin.
 Route::middleware(['admin.auth'])->prefix('admin')->name('admin.')->group(function () {
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
 
+    Route::post('/notifications/read-all', function () {
+        session(['admin_confirmed_notifications_read_at' => now()]);
+
+        return redirect()->back();
+    })->name('notifications.read_all');
+
     Route::get('/dashboard', function () {
-        $totalBookings     = Booking::count();
-        $pendingBookings   = Booking::where('status', 'PENDING')->count();
+        $totalBookings = Booking::count();
+        $pendingBookings = Booking::where('status', 'PENDING')->count();
         $confirmedBookings = Booking::where('status', 'CONFIRMED')->count();
         $cancelledBookings = Booking::where('status', 'CANCELLED')->count();
-        $revenue           = Booking::where('status', 'CONFIRMED')->sum('total_price');
-        $recentBookings    = Booking::orderByDesc('created_at')->take(6)->get();
+        $revenue = Booking::where('status', 'CONFIRMED')->sum('total_price');
+        $basePrice = VillaPrice::where('label', 'Base Price')
+            ->whereNull('valid_until')
+            ->latest()
+            ->first();
+        $todayDate = today()->toDateString();
+        $todayPrice = VillaPrice::where('is_active', true)
+            ->where(fn ($query) => $query
+                ->where('label', '!=', 'Base Price')
+                ->orWhereNull('label'))
+            ->whereDate('valid_from', '<=', $todayDate)
+            ->where(fn ($query) => $query
+                ->whereNull('valid_until')
+                ->orWhereDate('valid_until', '>=', $todayDate))
+            ->orderByDesc('valid_from')
+            ->latest()
+            ->first() ?? $basePrice;
+        $priceView = request()->query('price_view') === 'base' ? 'base' : 'today';
+        $displayPrice = $priceView === 'base' ? $basePrice : $todayPrice;
+        $recentBookings = Booking::orderByDesc('created_at')
+            ->paginate(6, ['*'], 'transactions_page')
+            ->withQueryString();
 
         return view('admin.dashboard', compact(
             'totalBookings',
@@ -64,6 +95,10 @@ Route::middleware(['admin.auth'])->prefix('admin')->name('admin.')->group(functi
             'confirmedBookings',
             'cancelledBookings',
             'revenue',
+            'basePrice',
+            'todayPrice',
+            'priceView',
+            'displayPrice',
             'recentBookings'
         ));
     })->name('dashboard');
@@ -74,7 +109,7 @@ Route::middleware(['admin.auth'])->prefix('admin')->name('admin.')->group(functi
         return view('admin.edit_profile', compact('admin'));
     })->name('edit_profile');
 
-    Route::post('/edit-profile', function (\Illuminate\Http\Request $request) {
+    Route::post('/edit-profile', function (Request $request) {
         $admin = Admin::findOrFail(session('admin_id'));
 
         $validated = $request->validate([
@@ -93,7 +128,7 @@ Route::middleware(['admin.auth'])->prefix('admin')->name('admin.')->group(functi
         $admin->save();
 
         session([
-            'admin_name'  => $admin->name,
+            'admin_name' => $admin->name,
             'admin_email' => $admin->email,
         ]);
 
@@ -132,7 +167,9 @@ Route::middleware(['admin.auth'])->prefix('admin')->name('admin.')->group(functi
             }
         }
 
-        $bookings = $query->orderByDesc('created_at')->get();
+        $bookings = $query->orderByDesc('created_at')
+            ->paginate(10)
+            ->withQueryString();
 
         return view('admin.booking_list', compact('bookings'));
     })->name('booking_list');
@@ -150,23 +187,50 @@ Route::middleware(['admin.auth'])->prefix('admin')->name('admin.')->group(functi
     Route::put('/blocked-dates/{blockedDate}', [BlockedDateController::class, 'update'])->name('blocked_dates.update');
     Route::delete('/blocked-dates/{blockedDate}', [BlockedDateController::class, 'destroy'])->name('blocked_dates.destroy');
 
-    Route::get('/villa-settings', function () {
-        return view('admin.villa_settings');
+    Route::get('/villa-settings', function (Request $request) {
+        $basePrice = VillaPrice::where('label', 'Base Price')
+            ->whereNull('valid_until')
+            ->latest()
+            ->first();
+        $todayDate = today()->toDateString();
+        $todayPrice = VillaPrice::where('is_active', true)
+            ->where(fn ($query) => $query
+                ->where('label', '!=', 'Base Price')
+                ->orWhereNull('label'))
+            ->whereDate('valid_from', '<=', $todayDate)
+            ->where(fn ($query) => $query
+                ->whereNull('valid_until')
+                ->orWhereDate('valid_until', '>=', $todayDate))
+            ->orderByDesc('valid_from')
+            ->latest()
+            ->first() ?? $basePrice;
+        $priceView = $request->query('price_view') === 'base' ? 'base' : 'today';
+        $displayPrice = $priceView === 'base' ? $basePrice : $todayPrice;
+        $seasonalPrices = VillaPrice::orderByDesc('valid_from')
+            ->where(fn ($query) => $query
+                ->where('label', '!=', 'Base Price')
+                ->orWhereNull('label'))
+            ->orderByDesc('created_at')
+            ->get();
+        $promos = Promo::orderByDesc('created_at')->get();
+
+        return view('admin.villa_settings', compact('basePrice', 'todayPrice', 'priceView', 'displayPrice', 'seasonalPrices', 'promos'));
     })->name('villa_settings');
 
     // Base Price Update
-    Route::post('/villa-settings/base-price', function (\Illuminate\Http\Request $request) {
+    Route::post('/villa-settings/base-price', function (Request $request) {
         $request->validate([
             'base_price' => 'required|numeric|min:0',
         ]);
 
-        \App\Models\VillaPrice::updateOrCreate(
-            ['is_active' => true],
+        VillaPrice::updateOrCreate(
+            ['label' => 'Base Price', 'valid_until' => null],
             [
                 'price_per_night' => $request->base_price,
-                'valid_from'      => now()->toDateString(),
-                'valid_until'     => null,
-                'is_active'       => true,
+                'label' => 'Base Price',
+                'valid_from' => now()->toDateString(),
+                'valid_until' => null,
+                'is_active' => true,
             ]
         );
 
@@ -174,34 +238,39 @@ Route::middleware(['admin.auth'])->prefix('admin')->name('admin.')->group(functi
     })->name('villa_settings.base_price');
 
     // Promo Update
-    Route::post('/villa-settings', function (\Illuminate\Http\Request $request) {
+    Route::post('/villa-settings', function (Request $request) {
         $request->validate([
-            'promo_name'       => 'required|string|max:100',
-            'promo_code'       => 'required|string|max:50',
+            'promo_name' => 'required|string|max:100',
+            'promo_code' => 'required|string|max:50',
             'discount_percent' => 'required|numeric|min:1|max:100',
-            'valid_from'       => 'required|date',
-            'valid_until'      => 'required|date|after_or_equal:valid_from',
-            'promo_status'     => 'required|in:active,inactive',
+            'valid_from' => 'required|date',
+            'valid_until' => 'required|date|after_or_equal:valid_from',
+            'promo_status' => 'required|in:active,inactive',
         ]);
 
-        \App\Models\Promo::updateOrCreate(
+        Promo::updateOrCreate(
             ['code' => strtoupper($request->promo_code)],
             [
-                'name'             => $request->promo_name,
+                'name' => $request->promo_name,
                 'discount_percent' => $request->discount_percent,
-                'valid_from'       => $request->valid_from,
-                'valid_until'      => $request->valid_until,
-                'is_active'        => $request->promo_status === 'active',
+                'valid_from' => $request->valid_from,
+                'valid_until' => $request->valid_until,
+                'is_active' => $request->promo_status === 'active',
             ]
         );
 
-        return redirect()->back()->with('success', "Promo '{$request->promo_name}' berhasil disimpan!");
+        return redirect()->back()->with('success', "Promo '{$request->promo_name}' successfully saved!");
     })->name('villa_settings.save');
 
     // ─── Promo Management ─────────────────────────────────────────
     Route::get('/promo/{promo}/edit', [PromoController::class, 'edit'])->name('promo.edit');
     Route::put('/promo/{promo}', [PromoController::class, 'update'])->name('promo.update');
     Route::delete('/promo/{promo}', [PromoController::class, 'destroy'])->name('promo.destroy');
+
+    Route::post('/villa-prices', [VillaPriceController::class, 'store'])->name('villa_prices.store');
+    Route::get('/villa-prices/{villaPrice}/edit', [VillaPriceController::class, 'edit'])->name('villa_prices.edit');
+    Route::put('/villa-prices/{villaPrice}', [VillaPriceController::class, 'update'])->name('villa_prices.update');
+    Route::delete('/villa-prices/{villaPrice}', [VillaPriceController::class, 'destroy'])->name('villa_prices.destroy');
 
     // ─── Reviews (ADMIN) ─────────────────────────────────────────
     Route::get('/reviews', [ReviewController::class, 'adminIndex'])->name('reviews.index');
@@ -215,6 +284,7 @@ Route::middleware(['admin.auth'])->prefix('admin')->name('admin.')->group(functi
 Route::get('/api/unavailable-dates', [BookingController::class, 'unavailableDates'])->name('booking.unavailable');
 Route::get('/api/calendar-data', [BookingController::class, 'getCalendarData'])->name('booking.calendarData');
 Route::post('/api/apply-promo', [BookingController::class, 'applyPromo'])->name('booking.applyPromo');
+Route::post('/api/booking-price', [BookingController::class, 'pricePreview'])->name('booking.pricePreview');
 
 Route::post('/payment/create', [PaymentController::class, 'createPayment'])->name('payment.create');
 Route::post('/payment/callback', [PaymentController::class, 'callback'])->name('payment.callback');
@@ -222,8 +292,9 @@ Route::get('/payment/return', [PaymentController::class, 'returnPage'])->name('p
 
 // Debug helper: clear booking session (only when app debug enabled)
 if (config('app.debug')) {
-    Route::get('/debug/clear-booking', function() {
+    Route::get('/debug/clear-booking', function () {
         session()->forget(['booking', 'booking_code', 'payment_order_id', 'payment_order_id']);
+
         return response('Booking session cleared', 200);
     });
 }

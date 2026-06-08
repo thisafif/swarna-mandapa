@@ -6,8 +6,11 @@ use App\Models\BlockedDate;
 use App\Models\Booking;
 use App\Models\Promo;
 use App\Models\VillaPrice;
+use App\Services\BookingPriceService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+use RuntimeException;
 
 class BookingController extends Controller
 {
@@ -33,6 +36,7 @@ class BookingController extends Controller
             'email' => 'required|email',
             'phone' => 'required|string|max:20',
             'country' => 'nullable|string|max:5',
+            'promo_code' => 'nullable|string|max:50',
         ]);
 
         if (! $this->isDateAvailable($request->check_in, $request->check_out)) {
@@ -40,37 +44,23 @@ class BookingController extends Controller
         }
 
         try {
-            $pricePerNight = $this->getPriceForDate($request->check_in);
-        } catch (\RuntimeException $e) {
+            $pricing = app(BookingPriceService::class)->calculate(
+                $request->check_in,
+                $request->check_out,
+                $request->promo_code
+            );
+        } catch (RuntimeException $e) {
             return back()->withErrors(['check_in' => $e->getMessage()])->withInput();
         }
 
-        $nights = Carbon::parse($request->check_in)->diffInDays(Carbon::parse($request->check_out));
-        $subtotal = $pricePerNight * $nights;
-        $discount = 0;
-        $promoCode = null;
-
-        if ($request->filled('promo_code')) {
-            $checkInDate = Carbon::parse($request->check_in)->toDateString();
-            $promo = Promo::where('code', strtoupper($request->promo_code))
-                ->where('is_active', true)
-                ->whereDate('valid_from', '<=', $checkInDate)
-                ->whereDate('valid_until', '>=', $checkInDate)
-                ->first();
-
-            if ($promo) {
-                $discount = $subtotal * ($promo->discount_percent / 100);
-                $promoCode = $promo->code;
-            }
-        }
-
-        $session = array_merge($request->all(), [
-            'price_per_night' => $pricePerNight,
-            'nights' => $nights,
-            'subtotal' => $subtotal,
-            'discount_amount' => $discount,
-            'total_price' => $subtotal - $discount,
-            'promo_code' => $promoCode,
+        $session = array_merge($request->except(['promo_discount']), [
+            'price_per_night' => $pricing['price_per_night'],
+            'nights' => $pricing['nights'],
+            'subtotal' => $pricing['subtotal'],
+            'discount_amount' => $pricing['discount_amount'],
+            'total_price' => $pricing['total_price'],
+            'promo_code' => $pricing['promo_code'],
+            'nightly_breakdown' => $pricing['nightly_breakdown'],
         ]);
 
         // Bersihkan session dari booking sebelumnya agar bisa membuat booking baru
@@ -106,6 +96,10 @@ class BookingController extends Controller
             return redirect()->route('booking.form');
         }
 
+        $request->validate([
+            'terms_of_rent' => 'accepted',
+        ]);
+
         $booking = Booking::create([
             'booking_code' => Booking::generateCode(),
             'check_in' => $data['check_in'],
@@ -118,6 +112,7 @@ class BookingController extends Controller
             'country' => $data['country'] ?? 'ID',
             'promo_code' => $data['promo_code'] ?? null,
             'price_per_night' => $data['price_per_night'],
+            'nightly_price_breakdown' => $data['nightly_breakdown'] ?? null,
             'discount_amount' => $data['discount_amount'],
             'total_price' => $data['total_price'],
             'status' => 'PENDING',
@@ -163,6 +158,14 @@ class BookingController extends Controller
         $booking = Booking::where('booking_code', strtoupper($code))->first();
         if (! $booking) {
             return redirect()->route('booking.form');
+        }
+
+        $filename = 'invoice-'.$booking->booking_code.'.pdf';
+
+        if (class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
+            return \Barryvdh\DomPDF\Facade\Pdf::loadView('booking.invoice-pdf', compact('booking'))
+                ->setPaper('a4', 'landscape')
+                ->download($filename);
         }
 
         return view('booking.invoice-pdf', compact('booking'));
@@ -245,6 +248,39 @@ class BookingController extends Controller
         return response()->json(['valid' => false, 'message' => 'Invalid promo code.']);
     }
 
+    public function pricePreview(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'check_in' => 'required|date|after_or_equal:today',
+            'check_out' => 'required|date|after:check_in',
+            'promo_code' => 'nullable|string|max:50',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
+
+        $validated = $validator->validated();
+
+        try {
+            $pricing = app(BookingPriceService::class)->calculate(
+                $validated['check_in'],
+                $validated['check_out'],
+                $validated['promo_code'] ?? null
+            );
+        } catch (RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+
+        return response()->json(array_merge(['success' => true], $pricing));
+    }
+
     // ── ADMIN: Manual Booking ─────────────────────────────────────
     public function storeManualBooking(Request $request)
     {
@@ -286,7 +322,7 @@ class BookingController extends Controller
             'notes' => $request->notes,
         ]);
 
-        return redirect()->route('admin.booking_list')->with('success', 'Manual booking berhasil disimpan.');
+        return redirect()->route('admin.booking_list')->with('success', 'Manual booking successfully saved.');
     }
 
     // ── API: Unavailable Dates ────────────────────────────────────
@@ -307,17 +343,33 @@ class BookingController extends Controller
         $bookings = Booking::whereIn('status', ['PENDING', 'CONFIRMED'])
             ->where('check_out', '>', $startOfMonth)
             ->where('check_in', '<', $endOfMonth->copy()->addDay())
-            ->get(['check_in', 'check_out', 'status']);
+            ->get([
+                'id',
+                'booking_code',
+                'status',
+                'first_name',
+                'last_name',
+                'email',
+                'phone',
+                'check_in',
+                'check_out',
+                'guests',
+                'price_per_night',
+                'nightly_price_breakdown',
+                'discount_amount',
+                'total_price',
+                'promo_code',
+                'is_manual',
+            ]);
 
         $bookedDates = [];
         foreach ($bookings as $b) {
             $current = Carbon::parse($b->check_in)->copy();
             $end = Carbon::parse($b->check_out);
+            $detail = $this->formatCalendarBookingDetail($b);
+
             while ($current->lte($end)) {
-                $bookedDates[$current->toDateString()] = [
-                    'status' => $b->status,
-                    'type' => 'booking',
-                ];
+                $bookedDates[$current->toDateString()] = $detail;
                 $current->addDay();
             }
         }
@@ -371,6 +423,7 @@ class BookingController extends Controller
             'check_out' => $validated['check_out'],
             'guests' => $validated['guests'],
             'price_per_night' => $validated['price_per_night'],
+            'nightly_price_breakdown' => null,
             'discount_amount' => $validated['discount_amount'],
             'total_price' => $totalPrice,
             'status' => $validated['status'],
@@ -437,12 +490,35 @@ class BookingController extends Controller
         return ! $hasBookingConflict && ! $this->hasBlockedDateConflict($checkIn, $checkOut);
     }
 
+    private function formatCalendarBookingDetail(Booking $booking): array
+    {
+        return [
+            'id' => $booking->id,
+            'booking_code' => $booking->booking_code,
+            'status' => $booking->status,
+            'type' => 'booking',
+            'first_name' => $booking->first_name,
+            'last_name' => $booking->last_name,
+            'email' => $booking->email,
+            'phone' => $booking->phone,
+            'check_in' => $booking->check_in->toDateString(),
+            'check_out' => $booking->check_out->toDateString(),
+            'guests' => $booking->guests,
+            'price_per_night' => (float) $booking->price_per_night,
+            'discount_amount' => (float) $booking->discount_amount,
+            'total_price' => (float) $booking->total_price,
+            'promo_code' => $booking->promo_code,
+            'is_manual' => (bool) $booking->is_manual,
+            'nightly_price_breakdown' => $booking->nightly_price_breakdown ?? [],
+        ];
+    }
+
     private function getPriceForDate(string $date): float
     {
         $price = $this->findPriceForDate($date);
 
         if ($price === null) {
-            throw new \RuntimeException('The active villa price has not been configured for the selected date. Please contact the admin.');
+            throw new RuntimeException('The active villa price has not been configured for the selected date. Please contact the admin.');
         }
 
         return $price;
@@ -451,12 +527,23 @@ class BookingController extends Controller
     private function findPriceForDate(string $date): ?float
     {
         $price = VillaPrice::where('is_active', true)
+            ->where(fn ($query) => $query
+                ->where('label', '!=', 'Base Price')
+                ->orWhereNull('label'))
             ->where('valid_from', '<=', $date)
             ->where(function ($q) use ($date) {
                 $q->whereNull('valid_until')->orWhere('valid_until', '>=', $date);
             })
             ->orderByDesc('valid_from')
-            ->first();
+            ->first()
+            ?? VillaPrice::where('is_active', true)
+                ->where('label', 'Base Price')
+                ->where('valid_from', '<=', $date)
+                ->where(function ($q) use ($date) {
+                    $q->whereNull('valid_until')->orWhere('valid_until', '>=', $date);
+                })
+                ->orderByDesc('valid_from')
+                ->first();
 
         return $price ? (float) $price->price_per_night : null;
     }

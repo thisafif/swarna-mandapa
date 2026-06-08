@@ -17,7 +17,23 @@
     $ci     = $booking->check_in  ?? null;
     $co     = $booking->check_out ?? null;
     $nights = ($ci && $co) ? (new DateTime($ci))->diff(new DateTime($co))->days : 0;
-    $base   = $pricePerNight * $nights;
+    $nightlyBreakdown = $booking->nightly_price_breakdown ?? [];
+    $base = $nightlyBreakdown
+        ? collect($nightlyBreakdown)->sum(fn ($night) => (int) ($night['price'] ?? 0))
+        : $pricePerNight * $nights;
+    if ($total > 0 && $base === 0) {
+        $base = $total + $discount;
+    }
+    $seasonGroups = collect($nightlyBreakdown)
+        ->groupBy(fn ($night) => ($night['label'] ?? 'Villa Rate').'|'.($night['price'] ?? 0))
+        ->map(function ($items) {
+            $first = $items->first();
+            return [
+                'label' => $first['label'] ?? 'Villa Rate',
+                'price' => (int) ($first['price'] ?? 0),
+                'nights' => $items->count(),
+            ];
+        });
     
     $status = $booking->status ?? 'PENDING';
 @endphp
@@ -203,6 +219,12 @@
                     <span style="color: #999; font-size: 11px;">
                         {{ date('d M', strtotime($ci)) }} – {{ date('d M Y', strtotime($co)) }} ({{ $nights }} × Rp {{ number_format($pricePerNight, 0, ',', '.') }})
                     </span>
+                    @if($seasonGroups->isNotEmpty())
+                        <br>
+                        @foreach($seasonGroups as $group)
+                            <span style="color:#999;font-size:10px">{{ $group['label'] }}: {{ $group['nights'] }} night{{ $group['nights'] > 1 ? 's' : '' }} &times; Rp {{ number_format($group['price'], 0, ',', '.') }}</span><br>
+                        @endforeach
+                    @endif
                 </td>
                 <td class="text-right amount-bold">Rp {{ number_format($base, 0, ',', '.') }}</td>
             </tr>

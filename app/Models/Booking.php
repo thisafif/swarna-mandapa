@@ -11,6 +11,7 @@ class Booking extends Model
         'booking_code', 'check_in', 'check_out', 'guests',
         'first_name', 'last_name', 'email', 'phone', 'country',
         'promo_code', 'price_per_night', 'discount_amount', 'total_price',
+        'nightly_price_breakdown',
         'status', 'is_manual', 'payment_ref', 'expires_at', 'notes',
         'payment_order_id', 'payment_id', 'paid_at',
     ];
@@ -20,6 +21,7 @@ class Booking extends Model
         'check_out'  => 'date',
         'expires_at' => 'datetime',
         'is_manual'  => 'boolean',
+        'nightly_price_breakdown' => 'array',
     ];
 
     // Generate kode booking unik, e.g. SWA-20250513-A3X9

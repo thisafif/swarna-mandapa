@@ -49,6 +49,12 @@
 
     @keyframes pulseGold{0%{box-shadow:0 0 0 0 rgba(184,146,74,.4)}70%{box-shadow:0 0 0 10px rgba(184,146,74,0)}100%{box-shadow:0 0 0 0 rgba(184,146,74,0)}}
     .price-summary-card.updated{animation:pulseGold .6s ease}
+    .price-summary-mobile-slot{display:none}
+    @media (max-width: 991.98px){
+        .price-summary-mobile-slot{display:block;margin-bottom:1rem}
+        .price-summary-desktop-slot:empty{display:none}
+        .price-summary-mobile-slot .price-summary-card{margin-bottom:0}
+    }
 
     .form-control-swarna.is-invalid{border-color:var(--danger) !important}
     .invalid-hint{font-size:.73rem;color:var(--danger);margin-top:.25rem;display:none}
@@ -578,6 +584,8 @@
             {{-- 5. Payment (Redirects to DOKU) --}}
             <input type="hidden" name="payment_method" id="pay-method-val" value="doku">
 
+            <div class="price-summary-mobile-slot" id="price-summary-mobile-slot"></div>
+
             {{-- Submit --}}
             <button type="submit" id="btn-submit"
                     class="btn btn-gold btn-gold-lg w-100 d-flex align-items-center justify-content-center gap-2">
@@ -628,6 +636,7 @@
             </div>
 
             {{-- Price Summary --}}
+            <div class="price-summary-desktop-slot" id="price-summary-desktop-slot">
             <div class="price-summary-card fade-up" id="price-card">
                 <div class="price-summary-header">
                     <div class="d-flex justify-content-between align-items-center">
@@ -672,6 +681,9 @@
         </div>
     </div>
 
+    <div id="s-season-breakdown" style="font-size:.78rem;color:var(--text-muted);margin:.25rem 0 .5rem"></div>
+    <div id="price-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:8px;padding:.65rem .75rem;margin-bottom:.75rem;font-size:.78rem"></div>
+
     {{-- Promo --}}
     <div class="my-3">
         <label class="form-label-sm">Promo Code</label>
@@ -708,6 +720,7 @@
     </div>
 </div>
             </div>
+            </div>
 
         </div>
 
@@ -722,8 +735,8 @@
 /* ══════════════════════════════════════════════════════════
    CONFIG
 ══════════════════════════════════════════════════════════ */
-const RATE = @json($pricePerNight);
-let promoDiscount = 0;
+let pricingValid = false;
+let pricingRequestId = 0;
 const idr  = n => 'Rp ' + Math.round(n).toLocaleString('id-ID').replace(/,/g, '.');
 const fmtD = s => {
     if (!s) return '— select';
@@ -735,6 +748,19 @@ const fmtDisplay = s => {
     const [y, m, dd] = s.split('-');
     return `${dd}/${m}/${y}`;
 };
+
+function placePriceSummaryCard() {
+    const card = document.getElementById('price-card');
+    const mobileSlot = document.getElementById('price-summary-mobile-slot');
+    const desktopSlot = document.getElementById('price-summary-desktop-slot');
+    if (!card || !mobileSlot || !desktopSlot) return;
+
+    const target = window.matchMedia('(max-width: 991.98px)').matches ? mobileSlot : desktopSlot;
+    if (card.parentElement !== target) target.appendChild(card);
+}
+
+placePriceSummaryCard();
+window.addEventListener('resize', placePriceSummaryCard);
  
 /* ══════════════════════════════════════════════════════════
    PHONE
@@ -1252,6 +1278,183 @@ async function applyPromo() {
 /* ══════════════════════════════════════════════════════════
    PAYMENT TABS
 ══════════════════════════════════════════════════════════ */
+function setPricingValid(valid) {
+    pricingValid = valid;
+    const btn = document.getElementById('btn-submit');
+    if (btn) btn.disabled = !valid;
+}
+
+function hidePriceError() {
+    const el = document.getElementById('price-error');
+    el.style.display = 'none';
+    el.textContent = '';
+}
+
+function showPriceError(message) {
+    const el = document.getElementById('price-error');
+    el.style.display = 'block';
+    el.innerHTML = `<i class="bi bi-exclamation-triangle me-1"></i>${message}`;
+}
+
+function renderSeasonBreakdown(items) {
+    const grouped = {};
+    items.forEach(item => {
+        const key = `${item.label || 'Villa Rate'}|${item.price}`;
+        if (!grouped[key]) {
+            grouped[key] = { label: item.label || 'Villa Rate', price: Number(item.price), nights: 0 };
+        }
+        grouped[key].nights += 1;
+    });
+
+    document.getElementById('s-season-breakdown').innerHTML = Object.values(grouped).map(item => (
+        `<div>${item.label}: ${item.nights} night${item.nights > 1 ? 's' : ''} &times; ${idr(item.price)}</div>`
+    )).join('');
+}
+
+function renderPricePreview(data) {
+    hidePriceError();
+    document.getElementById('s-nights').textContent = data.nights;
+    document.getElementById('s-base').textContent = idr(data.subtotal);
+    document.getElementById('s-total').textContent = idr(data.total_price);
+    document.getElementById('s-breakdown').style.display = 'block';
+    renderSeasonBreakdown(data.nightly_breakdown || []);
+
+    if (Number(data.discount_amount) > 0) {
+        document.getElementById('s-disc').textContent = '- ' + idr(data.discount_amount);
+        document.getElementById('s-disc-row').style.display = 'flex';
+        document.getElementById('promo-code-hidden').value = data.promo_code || '';
+        document.getElementById('promo-discount-hidden').value = data.discount_amount;
+    } else {
+        document.getElementById('s-disc-row').style.display = 'none';
+        document.getElementById('promo-code-hidden').value = data.promo_code || '';
+        document.getElementById('promo-discount-hidden').value = '0';
+    }
+
+    setPricingValid(true);
+    const c = document.getElementById('price-card');
+    c.classList.remove('updated'); void c.offsetWidth; c.classList.add('updated');
+}
+
+async function fetchPricePreview() {
+    const requestId = ++pricingRequestId;
+    const ci = document.getElementById('check_in').value;
+    const co = document.getElementById('check_out').value;
+    const promoCode = document.getElementById('promo-code-hidden').value;
+
+    document.getElementById('s-total').textContent = 'Checking...';
+
+    try {
+        const response = await fetch('{{ route('booking.pricePreview') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                check_in: ci,
+                check_out: co,
+                promo_code: promoCode || null,
+            }),
+        });
+        const data = await response.json();
+        if (requestId !== pricingRequestId) return;
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Unable to calculate price.');
+        }
+
+        renderPricePreview(data);
+    } catch (error) {
+        if (requestId !== pricingRequestId) return;
+        setPricingValid(false);
+        document.getElementById('s-breakdown').style.display = 'none';
+        document.getElementById('s-disc-row').style.display = 'none';
+        document.getElementById('s-season-breakdown').innerHTML = '';
+        document.getElementById('s-total').textContent = 'Unavailable';
+        showPriceError(error.message);
+    }
+}
+
+function calc() {
+    const ci = document.getElementById('check_in').value;
+    const co = document.getElementById('check_out').value;
+    document.getElementById('s-ci').textContent = fmtD(ci);
+    document.getElementById('s-co').textContent = fmtD(co);
+    setPricingValid(false);
+    hidePriceError();
+
+    if (!ci || !co) {
+        document.getElementById('s-breakdown').style.display = 'none';
+        document.getElementById('s-disc-row').style.display = 'none';
+        document.getElementById('s-season-breakdown').innerHTML = '';
+        document.getElementById('s-total').textContent = 'Rp â€”';
+        return;
+    }
+
+    const nights = Math.round((new Date(co) - new Date(ci)) / 86400000);
+    const minNightWarn = document.getElementById('min-night-warn');
+    if (nights < 2) {
+        if (minNightWarn) minNightWarn.style.display = 'flex';
+        document.getElementById('s-breakdown').style.display = 'none';
+        document.getElementById('s-total').textContent = 'Rp â€”';
+        return;
+    }
+    if (minNightWarn) minNightWarn.style.display = 'none';
+
+    fetchPricePreview();
+}
+
+async function applyPromo() {
+    const code = document.getElementById('promo-inp').value.trim().toUpperCase();
+    const el = document.getElementById('promo-msg');
+    el.style.display = 'block';
+
+    if (!code) {
+        document.getElementById('promo-code-hidden').value = '';
+        document.getElementById('promo-discount-hidden').value = '0';
+        el.style.color = 'var(--danger)';
+        el.innerHTML = '<i class="bi bi-x-circle me-1"></i>Please enter a promo code.';
+        calc();
+        return;
+    }
+
+    document.getElementById('promo-code-hidden').value = code;
+
+    try {
+        const response = await fetch('{{ route('booking.pricePreview') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                promo_code: code,
+                check_in: document.getElementById('check_in').value,
+                check_out: document.getElementById('check_out').value,
+            }),
+        });
+        const data = await response.json();
+
+        if (!response.ok || !data.success || !data.promo_code) {
+            throw new Error(data.message || 'Invalid promo code.');
+        }
+
+        el.style.color = 'var(--success)';
+        el.innerHTML = '<i class="bi bi-check-circle me-1"></i>Promo applied.';
+        document.getElementById('promo-code-hidden').value = data.promo_code;
+        document.getElementById('promo-discount-hidden').value = data.discount_amount;
+        renderPricePreview(data);
+    } catch (error) {
+        document.getElementById('promo-code-hidden').value = '';
+        document.getElementById('promo-discount-hidden').value = '0';
+        el.style.color = 'var(--danger)';
+        el.innerHTML = `<i class="bi bi-x-circle me-1"></i>${error.message}`;
+        calc();
+    }
+}
+
 function setPayTab(el, m) {
     document.querySelectorAll('.pay-tab').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
@@ -1383,9 +1586,10 @@ document.getElementById('booking-form').addEventListener('submit', function (e) 
         return;
     }
 
-    if (!RATE) {
+    if (!pricingValid) {
         e.preventDefault();
-        alert('The active villa price has not been configured yet. Please contact the admin.');
+        showPriceError('Please wait until the seasonal price is available for the selected dates.');
+        document.getElementById('price-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
     }
 
@@ -1416,5 +1620,7 @@ document.querySelectorAll('.form-control-swarna').forEach(el => {
         if (hint) hint.style.display = 'none';
     });
 });
+
+setPricingValid(false);
 </script>
 @endpush

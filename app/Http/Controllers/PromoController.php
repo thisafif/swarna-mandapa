@@ -40,7 +40,7 @@ class PromoController extends Controller
             'is_active' => $request->promo_status === 'active',
         ]);
 
-        return redirect()->route('admin.villa_settings')->with('success', "Promo '{$promo->code}' berhasil diupdate!");
+        return redirect()->route('admin.villa_settings')->with('success', "Promo '{$promo->code}' successfully updated!");
     }
 
     // Delete promo
@@ -49,6 +49,6 @@ class PromoController extends Controller
         $code = $promo->code;
         $promo->delete();
 
-        return redirect()->route('admin.villa_settings')->with('success', "Promo '{$code}' berhasil dihapus!");
+        return redirect()->route('admin.villa_settings')->with('success', "Promo '{$code}' successfully deleted!");
     }
 }

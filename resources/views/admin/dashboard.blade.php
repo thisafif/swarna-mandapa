@@ -16,24 +16,83 @@
 
     /* Metric Cards */
     .metric-cards-container {
-        display: flex;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
         gap: 1.5rem;
-        margin-bottom: 3rem;
-        justify-content: center;
+        margin-bottom: 2rem;
+        width: 100%;
     }
     
     .metric-card {
         background-color: #FFFFFF;
         border-radius: 12px;
         padding: 1.5rem;
-        flex: 1;
-        min-width: 140px;
-        max-width: 200px;
+        min-width: 0;
         box-shadow: 0 4px 15px rgba(0,0,0,0.03);
         display: flex;
         flex-direction: column;
         align-items: center;
         border: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .price-summary-card {
+        background: linear-gradient(135deg, #FFFDF8 0%, #F7EEDC 100%);
+        border: 1px solid rgba(166, 124, 55, 0.35);
+        box-shadow: 0 12px 28px rgba(166, 124, 55, 0.14);
+        border-radius: 12px;
+        padding: 1.35rem 1.5rem;
+        margin: 0 0 3rem;
+        width: 100%;
+        position: relative;
+        overflow: hidden;
+        display: grid;
+        grid-template-columns: auto minmax(180px, 1fr) auto;
+        align-items: center;
+        gap: 1.25rem;
+    }
+
+    .price-summary-card::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 4px;
+        background: linear-gradient(90deg, #A67C37, #D6B56D);
+    }
+
+    .price-summary-icon {
+        width: 46px;
+        height: 46px;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(166, 124, 55, 0.12);
+        color: #8A642B;
+        font-size: 1.35rem;
+    }
+
+    .price-summary-label {
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #7A6953;
+        margin-bottom: 0.25rem;
+    }
+
+    .price-summary-value {
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 2rem;
+        font-weight: 700;
+        color: #8A642B;
+        line-height: 1.05;
+    }
+
+    .price-summary-note {
+        color: #7A6953;
+        font-size: 0.78rem;
+        font-weight: 700;
+        margin-top: 0.35rem;
     }
 
     .metric-header {
@@ -73,6 +132,40 @@
         font-size: 2.5rem;
         font-weight: 700;
         color: var(--brand-gold-dark);
+    }
+
+    .metric-value.currency {
+        font-size: 1.45rem;
+        line-height: 1.15;
+        text-align: center;
+        overflow-wrap: anywhere;
+    }
+
+    .metric-filter-select {
+        width: 100%;
+        border: 1px solid #EBE4D5;
+        border-radius: 999px;
+        background: #FDFBF7;
+        color: var(--brand-gold-dark);
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 0.45rem 0.75rem;
+        margin-bottom: 1rem;
+        outline: none;
+    }
+
+    .price-summary-card .metric-filter-select {
+        width: 190px;
+        margin-bottom: 0;
+        background: #FFFFFF;
+    }
+
+    .metric-note {
+        margin-top: 0.6rem;
+        color: var(--text-muted);
+        font-size: 0.72rem;
+        text-align: center;
+        line-height: 1.3;
     }
 
     /* Grids */
@@ -130,6 +223,55 @@
     .tx-guest { font-weight: 600; color: #555; }
     .tx-date { color: var(--text-muted); }
     .tx-status-confirmed { color: #888; font-weight: 600; font-size: 0.75rem; letter-spacing: 0.05em;}
+
+    .widget-pagination-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid #F0F0F0;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    .widget-pagination {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .widget-page-item {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        border: 1px solid #EBEBEB;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #333;
+        text-decoration: none;
+        font-weight: 600;
+        transition: background-color 0.2s, color 0.2s;
+    }
+
+    .widget-page-item:hover {
+        background-color: #F5F5F5;
+    }
+
+    .widget-page-item.active {
+        color: var(--brand-gold-dark);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+    .widget-page-item.disabled {
+        color: #A0A0A0;
+        cursor: not-allowed;
+        background-color: #FAFAFA;
+    }
 
     /* Calendar Mockup */
     .calendar-mock {
@@ -194,20 +336,33 @@
             margin-bottom: 1.5rem;
         }
         .metric-cards-container {
-            flex-wrap: wrap;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 0.75rem;
         }
         .metric-card {
-            flex: 1 1 calc(50% - 0.75rem);
             min-width: 0;
-            max-width: none;
             padding: 1.25rem 1rem;
         }
         .metric-card:last-child {
-            flex: 1 1 100%;
+            grid-column: 1 / -1;
         }
         .metric-value {
             font-size: 2rem;
+        }
+        .metric-value.currency {
+            font-size: 1.25rem;
+        }
+        .price-summary-card {
+            margin: 0 0 1.5rem;
+            grid-template-columns: auto 1fr;
+            gap: 1rem;
+        }
+        .price-summary-card .metric-filter-select {
+            grid-column: 1 / -1;
+            width: 100%;
+        }
+        .price-summary-value {
+            font-size: 1.6rem;
         }
         .dashboard-grid {
             grid-template-columns: 1fr;
@@ -224,6 +379,14 @@
         }
         .table-transactions {
             min-width: 600px;
+        }
+        .widget-pagination-footer {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .widget-pagination {
+            justify-content: center;
         }
     }
 </style>
@@ -272,8 +435,35 @@
                 <div class="metric-icon-box icon-green" style="color: #4CAF50; background: #E8F5E9;"><i class="bi bi-currency-dollar"></i></div>
                 <div class="metric-title">Revenue</div>
             </div>
-            <div class="metric-value">Rp {{ number_format($revenue, 0, ',', '.') }}</div>
+            <div class="metric-value currency">Rp {{ number_format($revenue, 0, ',', '.') }}</div>
         </div>
+    </div>
+
+    <div class="price-summary-card">
+        <div class="price-summary-icon"><i class="bi bi-house-heart"></i></div>
+        <div>
+            <div class="price-summary-label">{{ $priceView === 'base' ? 'Base Price' : 'Today Price' }}</div>
+            <div class="price-summary-value">
+                @if($displayPrice)
+                    Rp {{ number_format($displayPrice->price_per_night, 0, ',', '.') }}
+                @else
+                    -
+                @endif
+            </div>
+            <div class="price-summary-note">
+                @if($priceView === 'today' && $displayPrice && $displayPrice->label && $displayPrice->label !== 'Base Price')
+                    {{ $displayPrice->label }}
+                @elseif($priceView === 'today')
+                    Base Price fallback
+                @else
+                    Normal-season fallback
+                @endif
+            </div>
+        </div>
+        <select class="metric-filter-select" onchange="window.location.href = this.value" aria-label="Select price view">
+            <option value="{{ route('admin.dashboard', array_merge(request()->except('price_view'), ['price_view' => 'today'])) }}" {{ $priceView === 'today' ? 'selected' : '' }}>Today Price</option>
+            <option value="{{ route('admin.dashboard', array_merge(request()->except('price_view'), ['price_view' => 'base'])) }}" {{ $priceView === 'base' ? 'selected' : '' }}>Base Price</option>
+        </select>
     </div>
 
     <!-- Main Grid -->
@@ -308,6 +498,33 @@
                     @endif
                 </tbody>
             </table>
+            </div>
+            <div class="widget-pagination-footer">
+                <div>
+                    Showing {{ $recentBookings->firstItem() ?? 0 }}-{{ $recentBookings->lastItem() ?? 0 }} of {{ $recentBookings->total() }} entries
+                </div>
+                <div class="widget-pagination">
+                    @if($recentBookings->onFirstPage())
+                        <span class="widget-page-item disabled"><i class="bi bi-chevron-left" style="font-size:0.7rem"></i></span>
+                    @else
+                        <a href="{{ $recentBookings->previousPageUrl() }}" class="widget-page-item" aria-label="Previous transaction page"><i class="bi bi-chevron-left" style="font-size:0.7rem"></i></a>
+                    @endif
+
+                    @php
+                        $transactionStartPage = max(1, $recentBookings->currentPage() - 1);
+                        $transactionEndPage = min($recentBookings->lastPage(), $recentBookings->currentPage() + 1);
+                    @endphp
+
+                    @for($page = $transactionStartPage; $page <= $transactionEndPage; $page++)
+                        <a href="{{ $recentBookings->url($page) }}" class="widget-page-item {{ $recentBookings->currentPage() === $page ? 'active' : '' }}">{{ $page }}</a>
+                    @endfor
+
+                    @if($recentBookings->hasMorePages())
+                        <a href="{{ $recentBookings->nextPageUrl() }}" class="widget-page-item" aria-label="Next transaction page"><i class="bi bi-chevron-right" style="font-size:0.7rem"></i></a>
+                    @else
+                        <span class="widget-page-item disabled"><i class="bi bi-chevron-right" style="font-size:0.7rem"></i></span>
+                    @endif
+                </div>
             </div>
         </div>
 

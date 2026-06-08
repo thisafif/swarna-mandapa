@@ -152,7 +152,7 @@
         ========================================= */
         .page-header {
             text-align: center;
-            padding: 3rem 0 2rem;
+            padding: 4.25rem 0 2rem;
         }
 
         .page-header .section-label {
@@ -319,7 +319,7 @@
         .required-star { color: var(--danger); }
 
         @media (max-width: 768px) {
-            .page-header { padding: 2rem 0 1.5rem; }
+            .page-header { padding: 3rem 0 1.5rem; }
             .panel { padding: 1.2rem; }
             .price-summary-card { position: static; margin-top: 1.5rem; }
             .container { padding-left: 1.25rem; padding-right: 1.25rem; }

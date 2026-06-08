@@ -135,9 +135,15 @@
     $co            = $booking->check_out;
     $nights        = (new DateTime($ci))->diff(new DateTime($co))->days;
     $pricePerNight = (int) $booking->price_per_night;
-    $base          = $pricePerNight * $nights;
     $discount      = (float) $booking->discount_amount;
     $total         = (int) $booking->total_price;
+    $nightlyBreakdown = $booking->nightly_price_breakdown ?? [];
+    $base = $nightlyBreakdown
+        ? collect($nightlyBreakdown)->sum(fn ($night) => (int) ($night['price'] ?? 0))
+        : $pricePerNight * $nights;
+    if ($total > 0 && $base === 0) {
+        $base = $total + $discount;
+    }
     $promoCode     = $booking->promo_code;
     $orderId       = $booking->payment_order_id ?? ('INV-' . strtoupper(substr(md5($booking->booking_code), 0, 8)));
     $paidAt        = $booking->paid_at ? \Carbon\Carbon::parse($booking->paid_at)->format('d M Y, H:i') : date('d M Y, H:i');

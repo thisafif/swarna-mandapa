@@ -180,6 +180,138 @@
         border-color: #F0F0F0;
     }
 
+    .detail-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.4);
+        z-index: 1040;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+        display: none;
+    }
+    .detail-backdrop.show {
+        display: block;
+        opacity: 1;
+        pointer-events: auto;
+    }
+    .detail-panel {
+        position: fixed;
+        top: 0;
+        right: -440px;
+        width: 100%;
+        max-width: 440px;
+        height: 100vh;
+        background: #FFFFFF;
+        z-index: 1050;
+        box-shadow: -5px 0 25px rgba(0,0,0,0.08);
+        transition: right 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        visibility: hidden;
+    }
+    .detail-panel.show {
+        right: 0;
+        visibility: visible;
+    }
+    .dp-header {
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid #EBEBEB;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #FAFAFA;
+    }
+    .dp-title {
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--brand-gold-dark);
+        margin: 0;
+    }
+    .dp-close {
+        background: none;
+        border: none;
+        font-size: 1.25rem;
+        color: #888;
+        cursor: pointer;
+        padding: 0.5rem;
+    }
+    .dp-body {
+        padding: 2rem;
+        overflow-y: auto;
+        flex-grow: 1;
+    }
+    .dp-section {
+        margin-bottom: 2rem;
+    }
+    .dp-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #777;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.75rem;
+    }
+    .dp-value {
+        font-size: 0.95rem;
+        color: #222;
+        font-weight: 500;
+        line-height: 1.5;
+    }
+    .dp-value-group {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.25rem;
+    }
+    .dp-status {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: #EDF7ED;
+        color: #1E4620;
+        border-radius: 50px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+    }
+    .dp-status.pending {
+        background: #FFF8E5;
+        color: #7A5A00;
+    }
+    .dp-status.blocked {
+        background: #F3F4F6;
+        color: #374151;
+    }
+    .dp-status.available {
+        background: #EDF7ED;
+        color: #1E4620;
+    }
+    .dp-card {
+        background: #FDFBF7;
+        border: 1px solid #EBE4D5;
+        border-radius: 8px;
+        padding: 1rem;
+    }
+    .dp-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.6rem;
+        color: #555;
+        font-size: 0.9rem;
+    }
+    .dp-row:last-child {
+        margin-bottom: 0;
+    }
+    .dp-row strong {
+        color: #222;
+    }
+    .dp-divider {
+        border: 0;
+        border-top: 1px solid #EBEBEB;
+        margin: 1.5rem 0;
+    }
+
     @media (max-width: 991px) {
         .calendar-grid {
             gap: 0.35rem;
@@ -208,6 +340,15 @@
         }
         .btn-today {
             padding: 0.35rem 0.75rem;
+        }
+        .detail-panel {
+            max-width: 100vw;
+            right: -100vw;
+        }
+        .dp-header,
+        .dp-body {
+            padding-left: 1.25rem;
+            padding-right: 1.25rem;
         }
         /* Mobile: show 3 letters of weekday to fit properly without wrapping */
         .weekday-full { display: none; }
@@ -249,6 +390,16 @@
         </div>
     </div>
 
+    <!-- Detail Backdrop & Panel (Offcanvas) -->
+    <div class="detail-backdrop" id="detailBackdrop" onclick="closeCalendarDetail()"></div>
+    <div class="detail-panel" id="detailPanel">
+        <div class="dp-header">
+            <h3 class="dp-title" id="detailPanelTitle">Date Detail</h3>
+            <button class="dp-close" type="button" onclick="closeCalendarDetail()" aria-label="Close detail panel"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="dp-body" id="detailPanelBody"></div>
+    </div>
+
     <!-- Calendar JS Interactivity -->
     <script>
         document.addEventListener("DOMContentLoaded", function() {
@@ -261,6 +412,10 @@
 
             const gridContainer = document.getElementById('calendarGrid');
             const monthDisplay = document.getElementById('monthYearDisplay');
+            const detailBackdrop = document.getElementById('detailBackdrop');
+            const detailPanel = document.getElementById('detailPanel');
+            const detailPanelTitle = document.getElementById('detailPanelTitle');
+            const detailPanelBody = document.getElementById('detailPanelBody');
 
             // Start dari bulan sekarang
             let currentDate = new Date(); 
@@ -286,6 +441,217 @@
                 } catch (error) {
                     console.error('Error fetching calendar data:', error);
                 }
+            }
+
+            function escapeHtml(value) {
+                return String(value ?? '').replace(/[&<>"']/g, function(char) {
+                    return {
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '"': '&quot;',
+                        "'": '&#039;'
+                    }[char];
+                });
+            }
+
+            function formatDate(dateStr) {
+                if (!dateStr) return '-';
+                return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+            }
+
+            function formatRupiah(value) {
+                return 'Rp ' + Math.round(Number(value || 0)).toLocaleString('id-ID');
+            }
+
+            function calculateNights(checkIn, checkOut) {
+                const start = new Date(checkIn + 'T00:00:00');
+                const end = new Date(checkOut + 'T00:00:00');
+                return Math.max(0, Math.round((end - start) / (1000 * 60 * 60 * 24)));
+            }
+
+            function getNightlyBreakdown(bookingData) {
+                if (!bookingData.nightly_price_breakdown) return [];
+                if (Array.isArray(bookingData.nightly_price_breakdown)) return bookingData.nightly_price_breakdown;
+                try {
+                    return JSON.parse(bookingData.nightly_price_breakdown);
+                } catch (e) {
+                    return [];
+                }
+            }
+
+            function renderNightlyBreakdown(bookingData) {
+                const breakdown = getNightlyBreakdown(bookingData);
+                if (!breakdown.length) return '';
+
+                const rows = breakdown.map(item => `
+                    <div class="dp-row">
+                        <span>${escapeHtml(formatDate(item.date))} ${item.label ? `(${escapeHtml(item.label)})` : ''}</span>
+                        <strong>${formatRupiah(item.price)}</strong>
+                    </div>
+                `).join('');
+
+                return `
+                    <div class="dp-section">
+                        <div class="dp-label">Nightly Breakdown</div>
+                        <div class="dp-card">${rows}</div>
+                    </div>
+                `;
+            }
+
+            function renderBookedDetail(dateStr, bookingData) {
+                const nights = calculateNights(bookingData.check_in, bookingData.check_out);
+                const breakdown = getNightlyBreakdown(bookingData);
+                const subtotal = breakdown.length
+                    ? breakdown.reduce((sum, item) => sum + Number(item.price || 0), 0)
+                    : Number(bookingData.price_per_night || 0) * nights;
+                const statusClass = String(bookingData.status || '').toLowerCase();
+                const fullName = `${bookingData.first_name || ''} ${bookingData.last_name || ''}`.trim() || 'Guest';
+
+                detailPanelTitle.textContent = 'Booking Detail';
+                detailPanelBody.innerHTML = `
+                    <div class="dp-section">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="dp-label mb-0">Booking Ref</div>
+                            <div class="dp-status ${escapeHtml(statusClass)}">${escapeHtml(bookingData.status || 'BOOKED')}</div>
+                        </div>
+                        <div class="dp-value" style="font-size:1.2rem; color:var(--brand-gold-dark); font-weight:700;">${escapeHtml(bookingData.booking_code || '-')}</div>
+                        <div style="font-size:0.85rem; color:#666; margin-top:0.4rem;">Selected date: ${escapeHtml(formatDate(dateStr))}</div>
+                    </div>
+
+                    <hr class="dp-divider">
+
+                    <div class="dp-section">
+                        <div class="dp-label">Guest Information</div>
+                        <div class="dp-value">
+                            <strong style="font-size:1.05rem;">${escapeHtml(fullName)}</strong><br>
+                            <span style="color:#666; font-size:0.85rem; display:inline-block; margin-top:0.4rem;">
+                                <i class="bi bi-whatsapp" style="margin-right:0.3rem"></i> ${escapeHtml(bookingData.phone || '-')}<br>
+                                <i class="bi bi-envelope" style="margin-right:0.3rem"></i> ${escapeHtml(bookingData.email || '-')}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="dp-section">
+                        <div class="dp-label">Stay Details</div>
+                        <div class="dp-value-group mb-3">
+                            <div>
+                                <div style="font-size:0.75rem; color:#888; font-weight:600; margin-bottom:0.2rem;">Check-in</div>
+                                <div style="font-weight:700; color:#222;">${escapeHtml(formatDate(bookingData.check_in))}</div>
+                            </div>
+                            <div>
+                                <div style="font-size:0.75rem; color:#888; font-weight:600; margin-bottom:0.2rem;">Check-out</div>
+                                <div style="font-weight:700; color:#222;">${escapeHtml(formatDate(bookingData.check_out))}</div>
+                            </div>
+                        </div>
+                        <div class="dp-card">
+                            <div class="dp-row"><span>Nights</span><strong>${nights}</strong></div>
+                            <div class="dp-row"><span>Guests</span><strong>${escapeHtml(bookingData.guests || 0)} Guest(s)</strong></div>
+                            <div class="dp-row"><span>Source</span><strong>${bookingData.is_manual ? 'Manual booking' : 'Online booking'}</strong></div>
+                        </div>
+                    </div>
+
+                    <hr class="dp-divider">
+
+                    <div class="dp-section">
+                        <div class="dp-label">Payment Summary</div>
+                        <div class="dp-row"><span>Average Price/Night</span><strong>${formatRupiah(bookingData.price_per_night)}</strong></div>
+                        <div class="dp-row"><span>Subtotal</span><strong>${formatRupiah(subtotal)}</strong></div>
+                        <div class="dp-row"><span>Discount</span><strong>${formatRupiah(bookingData.discount_amount)}</strong></div>
+                        <div class="dp-row"><span>Promo</span><strong>${escapeHtml(bookingData.promo_code || '-')}</strong></div>
+                        <div class="dp-row" style="border-top:1px dashed #DDD; padding-top:0.75rem; margin-top:0.75rem;">
+                            <span style="color:#222; font-weight:600;">Total Amount</span>
+                            <strong style="font-size:1.05rem; color:var(--brand-gold-dark);">${formatRupiah(bookingData.total_price)}</strong>
+                        </div>
+                    </div>
+
+                    ${renderNightlyBreakdown(bookingData)}
+                `;
+            }
+
+            function renderBlockedDetail(dateStr, blockedData) {
+                detailPanelTitle.textContent = 'Blocked Date';
+                detailPanelBody.innerHTML = `
+                    <div class="dp-section">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="dp-label mb-0">Date</div>
+                            <div class="dp-status blocked">${escapeHtml(blockedData.status || 'BLOCKED')}</div>
+                        </div>
+                        <div class="dp-value" style="font-size:1.2rem; color:var(--brand-gold-dark); font-weight:700;">${escapeHtml(formatDate(dateStr))}</div>
+                    </div>
+
+                    <hr class="dp-divider">
+
+                    <div class="dp-section">
+                        <div class="dp-label">Block Detail</div>
+                        <div class="dp-card">
+                            <div class="dp-row"><span>Type</span><strong>${escapeHtml(blockedData.type || 'blocked')}</strong></div>
+                            <div class="dp-row"><span>Status</span><strong>${escapeHtml(blockedData.status || 'BLOCKED')}</strong></div>
+                            <div class="dp-row"><span>Reason</span><strong>${escapeHtml(blockedData.reason || '-')}</strong></div>
+                        </div>
+                    </div>
+
+                    <div class="dp-section">
+                        <div class="dp-value" style="color:#666;">This date is marked unavailable and cannot be booked.</div>
+                    </div>
+                `;
+            }
+
+            function renderAvailableDetail(dateStr) {
+                detailPanelTitle.textContent = 'Available Date';
+                detailPanelBody.innerHTML = `
+                    <div class="dp-section">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="dp-label mb-0">Date</div>
+                            <div class="dp-status available">AVAILABLE</div>
+                        </div>
+                        <div class="dp-value" style="font-size:1.2rem; color:var(--brand-gold-dark); font-weight:700;">${escapeHtml(formatDate(dateStr))}</div>
+                    </div>
+
+                    <hr class="dp-divider">
+
+                    <div class="dp-section">
+                        <div class="dp-label">Availability</div>
+                        <div class="dp-card">
+                            <div class="dp-row"><span>Status</span><strong>Available</strong></div>
+                        </div>
+                    </div>
+
+                    <div class="dp-section">
+                        <div class="dp-value" style="color:#666;">There is no booking or block recorded for this date.</div>
+                    </div>
+                `;
+            }
+
+            function openCalendarDetail(dateStr) {
+                const bookingData = calendarData.booked && calendarData.booked[dateStr];
+                const blockedData = calendarData.blocked && calendarData.blocked[dateStr];
+
+                if (bookingData) {
+                    renderBookedDetail(dateStr, bookingData);
+                } else if (blockedData) {
+                    renderBlockedDetail(dateStr, blockedData);
+                } else {
+                    renderAvailableDetail(dateStr);
+                }
+
+                detailBackdrop.classList.add('show');
+                detailPanel.classList.add('show');
+            }
+
+            window.closeCalendarDetail = function() {
+                detailBackdrop.classList.remove('show');
+                detailPanel.classList.remove('show');
+            };
+
+            function attachDayClickHandlers() {
+                gridContainer.querySelectorAll('.day-box[data-date]').forEach(dayBox => {
+                    dayBox.addEventListener('click', () => openCalendarDetail(dayBox.dataset.date));
+                });
             }
 
             function renderCalendar(dateObj) {
@@ -327,13 +693,15 @@
                     } else if (isBlocked) {
                         classes += " blocked";
                         title = isBlocked.reason ? `Blocked (${isBlocked.reason})` : `Blocked (${isBlocked.status})`;
+                    } else {
+                        title = "Available";
                     }
 
                     // Cute little gold dot indicator for "Today"
                     let indicator = isRealToday ? '<div style="position:absolute; top:0.5rem; left:0.5rem; width:8px; height:8px; background-color:var(--brand-gold-dark); border-radius:50%; box-shadow: 0 0 5px rgba(0,0,0,0.1);" title="Today"></div>' : "";
 
                     htmlContent += `
-                        <div class="${classes}" title="${title}">
+                        <div class="${classes}" title="${escapeHtml(title)}" data-date="${dateStr}">
                             <span class="day-number">${day}</span>
                             ${indicator}
                         </div>
@@ -341,6 +709,7 @@
                 }
 
                 gridContainer.innerHTML = htmlContent;
+                attachDayClickHandlers();
             }
 
             /**

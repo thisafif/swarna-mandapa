@@ -55,7 +55,7 @@
     }
     .search-input {
         width: 100%;
-        padding: 0.75rem 1rem 0.75rem 2.8rem;
+        padding: 0.75rem 7.2rem 0.75rem 2.8rem;
         border-radius: 50px;
         border: 1px solid #C0C0C0; /* Higher contrast border */
         background-color: #FAFAFA;
@@ -66,6 +66,28 @@
         outline: none;
         border-color: var(--brand-gold);
         background-color: #FFFFFF;
+    }
+
+    .search-button {
+        position: absolute;
+        right: 0.35rem;
+        top: 50%;
+        transform: translateY(-50%);
+        border: none;
+        border-radius: 999px;
+        background: var(--brand-gold-dark);
+        color: #FFFFFF;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        padding: 0.55rem 1rem;
+        min-width: 92px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .search-button:hover {
+        background: #8A642B;
     }
 
     .filter-box {
@@ -153,6 +175,8 @@
         display: flex;
         gap: 0.5rem;
         align-items: center;
+        flex-wrap: wrap;
+        justify-content: center;
     }
     
     .page-item {
@@ -172,6 +196,12 @@
     
     .page-item:hover {
         background-color: #F5F5F5;
+    }
+
+    .page-item.disabled {
+        color: #A0A0A0;
+        cursor: not-allowed;
+        background-color: #FAFAFA;
     }
 
     .page-item.active {
@@ -275,6 +305,77 @@
         font-weight: 700;
         letter-spacing: 0.05em;
     }
+    .dp-contact-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+    .dp-contact-button {
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 0.65rem 0.85rem;
+        transition: background-color 0.2s;
+    }
+    .dp-contact-button i {
+        margin-right: 0.35rem;
+    }
+    .dp-contact-whatsapp {
+        background-color: #E7F7ED;
+        color: #137A3F;
+    }
+    .dp-contact-whatsapp:hover {
+        background-color: #D4F0DF;
+    }
+    .dp-contact-email {
+        background-color: #FDFBF7;
+        color: var(--brand-gold-dark);
+        border: 1px solid #EBE4D5;
+    }
+    .dp-contact-email:hover {
+        background-color: #F7F0E3;
+    }
+    .dp-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+    .dp-action-button {
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        padding: 0.75rem 1rem;
+        transition: background-color 0.2s;
+    }
+    .dp-action-button i {
+        margin-right: 0.35rem;
+    }
+    .dp-action-download {
+        grid-column: 1 / -1;
+        background-color: var(--brand-gold-dark);
+        color: #FFFFFF;
+    }
+    .dp-action-download:hover {
+        background-color: #8A642B;
+    }
+    .dp-action-edit {
+        background-color: #E8E8E8;
+        color: #333;
+    }
+    .dp-action-edit:hover {
+        background-color: #D8D8D8;
+    }
+    .dp-action-delete {
+        background-color: #FFE5E5;
+        color: #E05A5A;
+    }
+    .dp-action-delete:hover {
+        background-color: #FFD0D0;
+    }
 
     /* Edit Modal */
     #editBackdrop {
@@ -374,6 +475,7 @@
             <div class="search-box">
                 <i class="bi bi-search"></i>
                 <input type="text" name="q" value="{{ request()->query('q') }}" class="search-input" placeholder="Search by guest name or code" onkeypress="if(event.key === 'Enter'){ this.form.submit(); }">
+                <button type="submit" class="search-button">Search</button>
             </div>
             <div class="filter-box">
                 <select name="status" class="filter-select" onchange="this.form.submit()">
@@ -402,7 +504,7 @@
                 <tbody>
                     @forelse($bookings as $index => $booking)
                         <tr data-booking='@json($booking)' onclick="openDetail(this); return false;">
-                            <td class="col-no">{{ str_pad($index + 1, 2, '0', STR_PAD_LEFT) }}</td>
+                            <td class="col-no">{{ str_pad(($bookings->firstItem() ?? 0) + $index, 2, '0', STR_PAD_LEFT) }}</td>
                             <td class="col-code">{{ $booking->booking_code }}</td>
                             <td class="col-guest">{{ $booking->first_name }} {{ $booking->last_name }}</td>
                             <td class="col-date">{{ $booking->check_in->format('M d') }} - {{ $booking->check_out->format('M d, Y') }}</td>
@@ -423,13 +525,30 @@
 
         <!-- Footer Pagination -->
         <div class="table-footer">
-            <div class="entries-info">Showing 1-{{ $bookings->count() }} of {{ $bookings->count() }} entries</div>
+            <div class="entries-info">
+                Showing {{ $bookings->firstItem() ?? 0 }}-{{ $bookings->lastItem() ?? 0 }} of {{ $bookings->total() }} entries
+            </div>
             <div class="pagination">
-                <a href="#" class="page-item"><i class="bi bi-chevron-left mt-1" style="font-size:0.7rem"></i></a>
-                <a href="#" class="page-item active">1</a>
-                <a href="#" class="page-item">2</a>
-                <a href="#" class="page-item">3</a>
-                <a href="#" class="page-item"><i class="bi bi-chevron-right mt-1" style="font-size:0.7rem"></i></a>
+                @if($bookings->onFirstPage())
+                    <span class="page-item disabled"><i class="bi bi-chevron-left mt-1" style="font-size:0.7rem"></i></span>
+                @else
+                    <a href="{{ $bookings->previousPageUrl() }}" class="page-item" aria-label="Previous page"><i class="bi bi-chevron-left mt-1" style="font-size:0.7rem"></i></a>
+                @endif
+
+                @php
+                    $bookingStartPage = max(1, $bookings->currentPage() - 2);
+                    $bookingEndPage = min($bookings->lastPage(), $bookings->currentPage() + 2);
+                @endphp
+
+                @for($page = $bookingStartPage; $page <= $bookingEndPage; $page++)
+                    <a href="{{ $bookings->url($page) }}" class="page-item {{ $bookings->currentPage() === $page ? 'active' : '' }}">{{ $page }}</a>
+                @endfor
+
+                @if($bookings->hasMorePages())
+                    <a href="{{ $bookings->nextPageUrl() }}" class="page-item" aria-label="Next page"><i class="bi bi-chevron-right mt-1" style="font-size:0.7rem"></i></a>
+                @else
+                    <span class="page-item disabled"><i class="bi bi-chevron-right mt-1" style="font-size:0.7rem"></i></span>
+                @endif
             </div>
         </div>
     </div>
@@ -461,6 +580,14 @@
                         <i class="bi bi-envelope" style="margin-right:0.3rem"></i> <span id="dp-email">apip@example.com</span>
                     </span>
                 </div>
+                <div class="dp-contact-actions">
+                    <button type="button" class="btn dp-contact-button dp-contact-whatsapp" onclick="contactCustomerWhatsApp()">
+                        <i class="bi bi-whatsapp"></i> WhatsApp
+                    </button>
+                    <button type="button" class="btn dp-contact-button dp-contact-email" onclick="contactCustomerEmail()">
+                        <i class="bi bi-envelope"></i> Email
+                    </button>
+                </div>
             </div>
 
             <div class="dp-section">
@@ -487,12 +614,17 @@
             <div class="dp-section">
                 <div class="dp-label">Payment Breakdown</div>
                 <div class="d-flex justify-content-between mb-2">
-                    <span style="font-size:0.9rem; color:#555;">Price/Night</span>
+                    <span style="font-size:0.9rem; color:#555;">Average Price/Night</span>
                     <span style="font-size:0.9rem; font-weight:600;" id="dp-price-per-night">$0</span>
                 </div>
                 <div class="d-flex justify-content-between mb-2">
                     <span style="font-size:0.9rem; color:#555;">Nights</span>
                     <span style="font-size:0.9rem; font-weight:600;" id="dp-nights">0</span>
+                </div>
+                <div id="dp-season-breakdown" style="display:none;background:#FDFBF7;border:1px solid #EBE4D5;border-radius:8px;padding:.75rem;margin:.75rem 0;font-size:.82rem;color:#555"></div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span style="font-size:0.9rem; color:#555;">Subtotal</span>
+                    <span style="font-size:0.9rem; font-weight:600;" id="dp-subtotal">Rp 0</span>
                 </div>
                 <div class="d-flex justify-content-between mb-2">
                     <span style="font-size:0.9rem; color:#555;">Discount</span>
@@ -508,11 +640,14 @@
 
             <!-- Action Buttons -->
             <div class="dp-section">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    <button class="btn" style="background-color: #E8E8E8; color: #333; font-weight: 600; border-radius: 8px; padding: 0.75rem 1rem; cursor: pointer; border: none; transition: background-color 0.2s;" onclick="openEditModal()" onmouseover="this.style.backgroundColor='#D8D8D8'" onmouseout="this.style.backgroundColor='#E8E8E8'">
+                <div class="dp-actions">
+                    <button type="button" class="btn dp-action-button dp-action-download" onclick="downloadInvoice()">
+                        <i class="bi bi-download"></i> Download Invoice
+                    </button>
+                    <button type="button" class="btn dp-action-button dp-action-edit" onclick="openEditModal()">
                         <i class="bi bi-pencil-square"></i> Edit
                     </button>
-                    <button class="btn" style="background-color: #FFE5E5; color: #E05A5A; font-weight: 600; border-radius: 8px; padding: 0.75rem 1rem; cursor: pointer; border: none; transition: background-color 0.2s;" onclick="deleteBooking()" onmouseover="this.style.backgroundColor='#FFD0D0'" onmouseout="this.style.backgroundColor='#FFE5E5'">
+                    <button type="button" class="btn dp-action-button dp-action-delete" onclick="deleteBooking()">
                         <i class="bi bi-trash3"></i> Delete
                     </button>
                 </div>
@@ -610,11 +745,114 @@
     <!-- Script to toggle offcanvas -->
     <script>
         let currentBookingId = null;
+        let currentBookingCode = null;
+        let currentBookingData = null;
+
+        function formatRupiah(value) {
+            return 'Rp ' + Math.round(Number(value || 0)).toLocaleString('id-ID');
+        }
+
+        function formatBookingDate(value) {
+            if (!value) return '-';
+
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return value;
+
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        function getGuestName(bookingData) {
+            return [bookingData.first_name, bookingData.last_name].filter(Boolean).join(' ').trim() || 'Guest';
+        }
+
+        function normalizeWhatsAppNumber(phone) {
+            let digits = String(phone || '').replace(/\D/g, '');
+            if (!digits) return '';
+            if (digits.startsWith('00')) digits = digits.slice(2);
+            if (digits.startsWith('0')) digits = `62${digits.slice(1)}`;
+            return digits;
+        }
+
+        function buildCustomerMessage(bookingData) {
+            const guestName = getGuestName(bookingData);
+            const checkIn = formatBookingDate(bookingData.check_in);
+            const checkOut = formatBookingDate(bookingData.check_out);
+            const status = bookingData.status || '-';
+            const total = formatRupiah(bookingData.total_price);
+
+            return `Hello ${guestName},
+
+This is Swarna Mandapa Reservations regarding your booking ${bookingData.booking_code}.
+
+Stay dates: ${checkIn} - ${checkOut}
+Booking status: ${status}
+Total amount: ${total}
+
+Please let us know if you need any assistance with your reservation.
+
+Best regards,
+Swarna Mandapa Reservations`;
+        }
+
+        function getNightlyBreakdown(bookingData) {
+            if (!bookingData.nightly_price_breakdown) return [];
+            if (Array.isArray(bookingData.nightly_price_breakdown)) return bookingData.nightly_price_breakdown;
+            try {
+                return JSON.parse(bookingData.nightly_price_breakdown);
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function renderBookingPriceDetail(bookingData, nights) {
+            const breakdown = getNightlyBreakdown(bookingData);
+            const subtotal = breakdown.length
+                ? breakdown.reduce((sum, item) => sum + Number(item.price || 0), 0)
+                : Number(bookingData.price_per_night || 0) * nights;
+            const discount = Number(bookingData.discount_amount || 0);
+
+            document.getElementById('dp-price-per-night').textContent = formatRupiah(bookingData.price_per_night);
+            document.getElementById('dp-nights').textContent = nights;
+            document.getElementById('dp-subtotal').textContent = formatRupiah(subtotal);
+            document.getElementById('dp-discount').textContent = formatRupiah(discount);
+            document.getElementById('dp-total-price').textContent = formatRupiah(bookingData.total_price);
+
+            const box = document.getElementById('dp-season-breakdown');
+            if (!breakdown.length) {
+                box.style.display = 'none';
+                box.innerHTML = '';
+                return;
+            }
+
+            const grouped = {};
+            breakdown.forEach(item => {
+                const label = item.label || 'Villa Rate';
+                const price = Number(item.price || 0);
+                const key = `${label}|${price}`;
+                if (!grouped[key]) grouped[key] = { label, price, nights: 0 };
+                grouped[key].nights += 1;
+            });
+
+            box.innerHTML = '<div style="font-weight:700;color:#7A6953;margin-bottom:.45rem">Nightly Price Breakdown</div>' +
+                Object.values(grouped).map(item => (
+                    `<div style="display:flex;justify-content:space-between;gap:1rem;margin-top:.25rem">
+                        <span>${item.label}: ${item.nights} night${item.nights > 1 ? 's' : ''}</span>
+                        <span style="font-weight:600">${formatRupiah(item.price)}</span>
+                    </div>`
+                )).join('');
+            box.style.display = 'block';
+        }
 
         function openDetail(row) {
             try {
                 const bookingData = JSON.parse(row.getAttribute('data-booking'));
                 currentBookingId = bookingData.id;
+                currentBookingCode = bookingData.booking_code;
+                currentBookingData = bookingData;
                 
                 // Format dates
                 const checkIn = new Date(bookingData.check_in);
@@ -633,16 +871,47 @@
                 document.getElementById('dp-check-in').textContent = checkIn.toLocaleDateString('en-US', options);
                 document.getElementById('dp-check-out').textContent = checkOut.toLocaleDateString('en-US', options);
                 document.getElementById('dp-guests').textContent = bookingData.guests;
-                document.getElementById('dp-price-per-night').textContent = 'Rp ' + parseFloat(bookingData.price_per_night).toLocaleString('id-ID');
-                document.getElementById('dp-nights').textContent = nights;
-                document.getElementById('dp-discount').textContent = 'Rp ' + parseFloat(bookingData.discount_amount).toLocaleString('id-ID');
-                document.getElementById('dp-total-price').textContent = 'Rp ' + parseFloat(bookingData.total_price).toLocaleString('id-ID');
+                renderBookingPriceDetail(bookingData, nights);
                 
                 document.getElementById('detailBackdrop').classList.add('show');
                 document.getElementById('detailPanel').classList.add('show');
             } catch (e) {
                 console.error('Error loading booking details:', e);
             }
+        }
+
+        function downloadInvoice() {
+            if (!currentBookingCode) return;
+
+            const invoiceUrl = `/booking/invoice/pdf?code=${encodeURIComponent(currentBookingCode)}`;
+            window.open(invoiceUrl, '_blank', 'noopener');
+        }
+
+        function contactCustomerWhatsApp() {
+            if (!currentBookingData) return;
+
+            const phone = normalizeWhatsAppNumber(currentBookingData.phone);
+            if (!phone) {
+                alert('Customer phone number is not available.');
+                return;
+            }
+
+            const message = buildCustomerMessage(currentBookingData);
+            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener');
+        }
+
+        function contactCustomerEmail() {
+            if (!currentBookingData) return;
+
+            const email = String(currentBookingData.email || '').trim();
+            if (!email) {
+                alert('Customer email address is not available.');
+                return;
+            }
+
+            const subject = `Swarna Mandapa Booking ${currentBookingData.booking_code}`;
+            const message = buildCustomerMessage(currentBookingData);
+            window.location.href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
         }
 
         function closeDetail() {
