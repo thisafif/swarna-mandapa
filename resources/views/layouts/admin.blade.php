@@ -505,6 +505,18 @@
                 @endif
             </a>
 
+            <div class="nav-section-title mt-4">CMS</div>
+            <a href="{{ route('admin.home_content.index') }}" class="nav-link {{ request()->routeIs('admin.home_content.*') ? 'active' : '' }}">
+                <i class="bi bi-house-heart"></i> Home Content
+            </a>
+            <a href="{{ route('admin.gallery.index') }}" class="nav-link {{ request()->routeIs('admin.gallery.*') ? 'active' : '' }}">
+                <i class="bi bi-images"></i> Gallery
+            </a>
+            <a href="{{ route('admin.media_library') }}" class="nav-link {{ request()->routeIs('admin.media_library') ? 'active' : '' }}">
+                <i class="bi bi-collection"></i> Media Library
+            </a>
+
+            
             <div class="nav-section-title mt-5">CONFIGURATION</div>
             <a href="{{ route('admin.villa_settings') }}" class="nav-link {{ request()->routeIs('admin.villa_settings') ? 'active' : '' }}"><i class="bi bi-gear"></i> Villa Settings</a>
 

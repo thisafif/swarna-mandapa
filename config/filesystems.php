@@ -60,6 +60,21 @@ return [
             'report' => false,
         ],
 
+        // ─── Cloudflare R2 ────────────────────────────────────────────
+        'r2' => [
+            'driver'                  => 's3',
+            'key'                     => env('CLOUDFLARE_R2_ACCESS_KEY_ID'),
+            'secret'                  => env('CLOUDFLARE_R2_SECRET_ACCESS_KEY'),
+            'region'                  => 'auto',
+            'bucket'                  => env('CLOUDFLARE_R2_BUCKET', 'swarnamandapa'),
+            'endpoint'                => env('CLOUDFLARE_R2_ENDPOINT', 'https://3aa3b1a6d4bb16df6b913c041280c379.r2.cloudflarestorage.com'),
+            'url'                     => env('CLOUDFLARE_R2_URL'),   // public URL / custom domain
+            'use_path_style_endpoint' => true,
+            'visibility'              => 'public',
+            'throw'                   => false,
+            'report'                  => false,
+        ],
+
     ],
 
     /*
