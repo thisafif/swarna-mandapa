@@ -14,7 +14,7 @@
 <div class="d-flex align-items-center justify-content-between mb-4">
     <div>
         <h1 style="font-family:'Cormorant Garamond',serif; font-size:1.8rem; font-weight:600; color:#333; margin:0">Media Library</h1>
-        <p style="color:#888; font-size:0.85rem; margin:0">Semua file yang pernah diupload</p>
+        <p style="color:#888; font-size:0.85rem; margin:0">All uploaded files</p>
     </div>
 </div>
 
@@ -22,19 +22,19 @@
 <div class="row g-3 mb-4">
     <div class="col-4">
         <div class="stat-card">
-            <p style="font-size:0.72rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#aaa; margin:0">Total File</p>
+            <p style="font-size:0.72rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#aaa; margin:0">Total Files</p>
             <p style="font-size:1.8rem; font-weight:700; color:#333; margin:0; line-height:1.2">{{ $totalCount }}</p>
         </div>
     </div>
     <div class="col-4">
         <div class="stat-card">
-            <p style="font-size:0.72rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#aaa; margin:0">Gambar</p>
+            <p style="font-size:0.72rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#aaa; margin:0">Images</p>
             <p style="font-size:1.8rem; font-weight:700; color:#198754; margin:0; line-height:1.2">{{ $imageCount }}</p>
         </div>
     </div>
     <div class="col-4">
         <div class="stat-card">
-            <p style="font-size:0.72rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#aaa; margin:0">Video</p>
+            <p style="font-size:0.72rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#aaa; margin:0">Videos</p>
             <p style="font-size:1.8rem; font-weight:700; color:#6c757d; margin:0; line-height:1.2">{{ $videoCount }}</p>
         </div>
     </div>
@@ -44,12 +44,12 @@
 <div class="bg-white rounded-3 shadow-sm p-3 mb-4">
     <form action="{{ route('admin.media_library') }}" method="GET" class="row g-2 align-items-end">
         <div class="col-md-4">
-            <input type="text" name="search" class="form-control" placeholder="Cari nama file..."
+            <input type="text" name="search" class="form-control" placeholder="Search file name..."
                 value="{{ $search }}" style="border-radius:8px; border-color:#e0e0e0; font-size:0.875rem">
         </div>
         <div class="col-md-3">
             <select name="category" class="form-select" style="border-radius:8px; border-color:#e0e0e0; font-size:0.875rem">
-                <option value="">Semua Kategori</option>
+                <option value="">All Categories</option>
                 @foreach($categories as $slug => $label)
                     <option value="{{ $slug }}" {{ $category === $slug ? 'selected' : '' }}>{{ $label }}</option>
                 @endforeach
@@ -57,9 +57,9 @@
         </div>
         <div class="col-md-2">
             <select name="type" class="form-select" style="border-radius:8px; border-color:#e0e0e0; font-size:0.875rem">
-                <option value="">Semua Tipe</option>
-                <option value="image" {{ $type === 'image' ? 'selected' : '' }}>Gambar</option>
-                <option value="video" {{ $type === 'video' ? 'selected' : '' }}>Video</option>
+                <option value="">All Types</option>
+                <option value="image" {{ $type === 'image' ? 'selected' : '' }}>Images</option>
+                <option value="video" {{ $type === 'video' ? 'selected' : '' }}>Videos</option>
             </select>
         </div>
         <div class="col-md-3 d-flex gap-2">
@@ -79,7 +79,7 @@
 @if($media->isEmpty())
     <div class="text-center py-5 bg-white rounded-3">
         <i class="bi bi-folder2-open" style="font-size:3rem; color:#ddd; display:block; margin-bottom:1rem"></i>
-        <p style="color:#aaa; font-size:0.9rem">Tidak ada media yang ditemukan.</p>
+        <p style="color:#aaa; font-size:0.9rem">No media found.</p>
     </div>
 @else
     <div class="row g-3">
@@ -113,10 +113,10 @@
                                 <i class="bi bi-pencil me-1"></i>Edit
                             </a>
                             <form action="{{ route('admin.gallery.destroy', $item) }}" method="POST"
-                                onsubmit="return confirm('Hapus file ini?')" class="flex-fill">
+                                onsubmit="return confirm('Delete this file?')" class="flex-fill">
                                 @csrf @method('DELETE')
                                 <button type="submit" class="btn btn-sm w-100" style="background:#fdf0f0; color:#dc3545; border-radius:6px; font-size:0.75rem; font-weight:600">
-                                    <i class="bi bi-trash me-1"></i>Hapus
+                                    <i class="bi bi-trash me-1"></i>Delete
                                 </button>
                             </form>
                         </div>

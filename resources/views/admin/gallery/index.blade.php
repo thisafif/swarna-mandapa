@@ -9,7 +9,7 @@
     .media-overlay { position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0); transition:background 0.2s; display:flex; align-items:center; justify-content:center; gap:0.5rem; opacity:0; }
     .media-card:hover .media-overlay { background:rgba(0,0,0,0.45); opacity:1; }
     .media-badge { position:absolute; top:8px; left:8px; padding:2px 8px; border-radius:999px; font-size:0.65rem; font-weight:700; letter-spacing:0.05em;}
-    .category-tab { border:none; background:none; padding:0.5rem 1.25rem; font-size:0.85rem; font-weight:600; color:#888; border-bottom:2px solid transparent; transition:all 0.2s; cursor:pointer; }
+    .category-tab { border:none; background:none; padding:0.5rem 1.25rem; font-size:0.85rem; font-weight:600; color:#888; border-bottom:2px solid transparent; transition:all 0.2s; cursor:pointer; text-decoration:none; }
     .category-tab.active { color:var(--brand-gold); border-bottom-color:var(--brand-gold); }
     .category-tab:hover { color:var(--brand-gold-dark); }
     .upload-zone { border:2px dashed #ddd; border-radius:12px; padding:2.5rem; text-align:center; cursor:pointer; transition:border-color 0.2s, background 0.2s; }
@@ -22,7 +22,7 @@
 <div class="d-flex align-items-center justify-content-between mb-4">
     <div>
         <h1 style="font-family:'Cormorant Garamond',serif; font-size:1.8rem;font-weight:600; color:#333; margin:0">Gallery Management</h1>
-        <p style="color:#888; font-size:0.85rem; margin:0">Upload dan kelola media gallery per kategori</p>
+        <p style="color:#888; font-size:0.85rem; margin:0">Upload and manage gallery media by category</p>
     </div>
     <button class="btn" style="background:var(--brand-gold); color:white; border-radius:8px; font-weight:600; font-size:0.875rem"
         data-bs-toggle="modal" data-bs-target="#uploadModal">
@@ -58,10 +58,10 @@
 @if($media->isEmpty())
     <div class="text-center py-5" style="background:white; border-radius:12px">
         <i class="bi bi-images" style="font-size:3rem; color:#ddd; display:block; margin-bottom:1rem"></i>
-        <p style="color:#aaa; font-size:0.9rem">Belum ada media di kategori ini.</p>
+        <p style="color:#aaa; font-size:0.9rem">No media in this category yet.</p>
         <button class="btn btn-sm mt-2" style="background:var(--brand-gold);color:white; border-radius:8px; font-size:0.85rem"
             data-bs-toggle="modal" data-bs-target="#uploadModal">
-            <i class="bi bi-cloud-upload me-1"></i>Upload sekarang
+            <i class="bi bi-cloud-upload me-1"></i>Upload now
         </button>
     </div>
 @else
@@ -80,7 +80,6 @@
                         <a href="{{ route('admin.gallery.edit', $item) }}" class="btn btn-sm btn-light" style="border-radius:6px; font-size:0.8rem">
                             <i class="bi bi-pencil"></i>
                         </a>
-                        {{-- Tombol delete: buka modal konfirmasi --}}
                         <button type="button"
                             class="btn btn-sm btn-danger"
                             style="border-radius:6px; font-size:0.8rem"
@@ -123,9 +122,9 @@
                 <div class="modal-body" style="padding:1.5rem">
 
                     <div class="mb-4">
-                        <label class="form-label" style="font-weight:600; font-size:0.85rem">Kategori</label>
+                        <label class="form-label" style="font-weight:600; font-size:0.85rem">Category</label>
                         <select name="category" class="form-select" style="border-radius:8px; border-color:#e0e0e0; font-size:0.9rem" required>
-                            <option value="">-- Pilih Kategori --</option>
+                            <option value="">-- Select Category --</option>
                             @foreach($categories as $slug => $label)
                                 <option value="{{ $slug }}" {{ $category === $slug ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
@@ -133,19 +132,19 @@
                     </div>
 
                     <div class="mb-4">
-                        <label class="form-label" style="font-weight:600; font-size:0.85rem">File Media</label>
+                        <label class="form-label" style="font-weight:600; font-size:0.85rem">Media Files</label>
                         <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
                             <i class="bi bi-cloud-arrow-up" style="font-size:2rem; color:#ccc; display:block; margin-bottom:0.75rem"></i>
-                            <p style="font-size:0.9rem; color:#888; margin:0">Klik atau drag & drop file ke sini</p>
-                            <p style="font-size:0.75rem; color:#bbb; margin:0.25rem 0 0">JPG, PNG, WebP, GIF, MP4, MOV, WebM – maks 200MB per file, 20 file sekaligus</p>
+                            <p style="font-size:0.9rem; color:#888; margin:0">Click or drag & drop files here</p>
+                            <p style="font-size:0.75rem; color:#bbb; margin:0.25rem 0 0">JPG, PNG, WebP – max 10MB per file, 20 files at once</p>
                             <div id="fileList" class="mt-3"></div>
                         </div>
-                        <input type="file" id="fileInput" name="files[]" multiple accept="image/*,video/mp4,video/mov,video/webm" style="display:none">
+                        <input type="file" id="fileInput" name="files[]" multiple accept="image/jpeg,image/png,image/webp" style="display:none">
                     </div>
 
                 </div>
                 <div class="modal-footer" style="border-top:1px solid #f0f0f0; padding:1rem 1.5rem">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-radius:8px; font-size:0.9rem">Batal</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-radius:8px; font-size:0.9rem">Cancel</button>
                     <button type="submit" class="btn" style="background:var(--brand-gold); color:white; border-radius:8px; font-weight:600; font-size:0.9rem; padding:0.6rem 1.75rem">
                         <i class="bi bi-cloud-upload me-2"></i>Upload
                     </button>
@@ -195,7 +194,6 @@
 
 @push('scripts')
 <script>
-    // ── File upload preview ────────────────────────────────────────────────
     const fileInput = document.getElementById('fileInput');
     const dropZone  = document.getElementById('dropZone');
     const fileList  = document.getElementById('fileList');
@@ -221,7 +219,6 @@
         ).join('');
     }
 
-    // ── Delete confirmation modal ──────────────────────────────────────────
     function confirmDelete(actionUrl, fileName) {
         document.getElementById('deleteForm').action = actionUrl;
         document.getElementById('deleteFileName').textContent = fileName;
