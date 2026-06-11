@@ -35,6 +35,7 @@ Route::get('/gallery', function () {
     return view('gallery');
 })->name('gallery');
 
+
 // ─── Reviews (PUBLIC) ────────────────────────────────────────
 Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews');
 Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store');
