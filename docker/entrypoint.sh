@@ -20,6 +20,10 @@ php artisan storage:link || true
 
 php artisan migrate --force
 
+if [ "$RUN_MIGRATIONS" = "true" ]; then
+    php artisan migrate --force
+fi
+
 if [ "$RUN_SEEDER" = "true" ]; then
     php artisan db:seed --force
 fi
