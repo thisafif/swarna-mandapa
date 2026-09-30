@@ -4,7 +4,7 @@
 <div class="d-flex align-items-center justify-content-between mb-4">
     <div>
         <h1 style="font-family:'Cormorant Garamond',serif; font-size:1.8rem; font-weight:600; color:#333; margin:0">Home Content</h1>
-        <p style="color:#888; font-size:0.85rem; margin:0">Kelola konten Hero Section halaman utama</p>
+        <p style="color:#888; font-size:0.85rem; margin:0">Manage Hero Section content for the main page</p>
     </div>
 </div>
 
@@ -79,23 +79,23 @@
                 @php $videoUrl = $content->get('hero_video_url')?->value; @endphp
                 @if($videoUrl)
                     <div class="mb-3">
-                        <p style="font-size:0.8rem; color:#888; margin-bottom:0.5rem">Video saat ini:</p>
+                        <p style="font-size:0.8rem; color:#888; margin-bottom:0.5rem">Current video:</p>
                         <video src="{{ $videoUrl }}" style="width:100%; border-radius:8px; max-height:160px; object-fit:cover" muted loop autoplay></video>
                         <p style="font-size:0.72rem; color:#aaa; margin-top:0.5rem; word-break:break-all">{{ $videoUrl }}</p>
                     </div>
                 @else
                     <div class="mb-3 p-3 text-center" style="background:#f8f8f8; border-radius:8px; border:1px dashed #ddd">
                         <i class="bi bi-camera-video" style="font-size:1.5rem; color:#ccc"></i>
-                        <p style="font-size:0.8rem; color:#aaa; margin:0.5rem 0 0">Belum ada video. Saat ini menggunakan video lokal (sm.MP4).</p>
+                        <p style="font-size:0.8rem; color:#aaa; margin:0.5rem 0 0">No video yet. Currently using local video (sm.MP4).</p>
                     </div>
                 @endif
 
                 <div>
-                    <label class="form-label" style="font-weight:600; font-size:0.85rem">Upload Video Baru</label>
+                    <label class="form-label" style="font-weight:600; font-size:0.85rem">Upload New Video</label>
                     <input type="file" name="hero_video" class="form-control @error('hero_video') is-invalid @enderror"
                         accept="video/mp4,video/mov,video/avi,video/webm"
                         style="border-radius:8px; border-color:#e0e0e0; font-size:0.85rem">
-                    <p class="text-muted mt-1" style="font-size:0.75rem">Format: MP4, MOV, AVI, WebM. Maks 200MB.</p>
+                    <p class="text-muted mt-1" style="font-size:0.75rem">Format: MP4, MOV, AVI, WebM. Max 200MB.</p>
                     @error('hero_video')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
             </div>
@@ -104,29 +104,29 @@
             <div class="bg-white rounded-3 p-4 shadow-sm">
                 <h6 style="font-weight:700; font-size:0.75rem; letter-spacing:0.08em; text-transform:uppercase; color:#888; margin-bottom:1.5rem">
                     <i class="bi bi-image me-2" style="color:var(--brand-gold)"></i>HERO BACKGROUND IMAGE
-                    <span style="font-weight:400; font-size:0.7rem; color:#aaa">(fallback jika tidak ada video)</span>
+                    <span style="font-weight:400; font-size:0.7rem; color:#aaa">(fallback if no video)</span>
                 </h6>
 
                 @php $imageUrl = $content->get('hero_image_url')?->value; @endphp
                 @if($imageUrl)
                     <div class="mb-3">
-                        <p style="font-size:0.8rem; color:#888; margin-bottom:0.5rem">Gambar saat ini:</p>
+                        <p style="font-size:0.8rem; color:#888; margin-bottom:0.5rem">Current image:</p>
                         <img src="{{ $imageUrl }}" style="width:100%; border-radius:8px; max-height:160px; object-fit:cover" alt="Hero image">
                         <p style="font-size:0.72rem; color:#aaa; margin-top:0.5rem; word-break:break-all">{{ $imageUrl }}</p>
                     </div>
                 @else
                     <div class="mb-3 p-3 text-center" style="background:#f8f8f8; border-radius:8px; border:1px dashed #ddd">
                         <i class="bi bi-image" style="font-size:1.5rem; color:#ccc"></i>
-                        <p style="font-size:0.8rem; color:#aaa; margin:0.5rem 0 0">Belum ada gambar fallback.</p>
+                        <p style="font-size:0.8rem; color:#aaa; margin:0.5rem 0 0">No fallback image yet.</p>
                     </div>
                 @endif
 
                 <div>
-                    <label class="form-label" style="font-weight:600; font-size:0.85rem">Upload Gambar Baru</label>
+                    <label class="form-label" style="font-weight:600; font-size:0.85rem">Upload New Image</label>
                     <input type="file" name="hero_image" class="form-control @error('hero_image') is-invalid @enderror"
                         accept="image/jpg,image/jpeg,image/png,image/webp"
                         style="border-radius:8px; border-color:#e0e0e0; font-size:0.85rem">
-                    <p class="text-muted mt-1" style="font-size:0.75rem">Format: JPG, PNG, WebP. Maks 10MB.</p>
+                    <p class="text-muted mt-1" style="font-size:0.75rem">Format: JPG, PNG, WebP. Max 10MB.</p>
                     @error('hero_image')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
             </div>
@@ -135,9 +135,9 @@
     </div>
 
     <div class="mt-4 d-flex justify-content-end gap-3">
-        <a href="{{ route('admin.dashboard') }}" class="btn btn-outline-secondary" style="border-radius:8px; font-size:0.9rem">Batal</a>
+        <a href="{{ route('admin.dashboard') }}" class="btn btn-outline-secondary" style="border-radius:8px; font-size:0.9rem">Cancel</a>
         <button type="submit" class="btn" style="background:var(--brand-gold); color:white; border-radius:8px; font-weight:600; font-size:0.9rem; padding:0.6rem 2rem">
-            <i class="bi bi-check2 me-2"></i>Simpan Perubahan
+            <i class="bi bi-check2 me-2"></i>Save Changes
         </button>
     </div>
 </form>

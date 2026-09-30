@@ -29,20 +29,20 @@ class GalleryController extends Controller
         $request->validate([
             'category'  => 'required|string|in:' . implode(',', array_keys(GalleryMedia::$categories)),
             'files'     => 'required|array|min:1|max:20',
-            'files.*'   => 'required|file|mimes:jpg,jpeg,png,webp,gif,mp4,mov,webm|max:204800',
+            'files.*'   => 'required|file|mimes:jpg,jpeg,png,webp|max:10240',
         ]);
 
         $uploaded = 0;
 
         foreach ($request->file('files') as $file) {
-            $mediaType = str_starts_with($file->getMimeType(), 'video') ? 'video' : 'image';
+            $mediaType = 'image';
             $filename  = time() . '_' . $uploaded . '_' . str_replace(' ', '_', $file->getClientOriginalName());
             $path      = 'gallery/' . $request->category . '/' . $filename;
 
             Storage::disk('r2')->put($path, file_get_contents($file), 'public');
             $url = Storage::disk('r2')->url($path);
 
-            $maxOrder = GalleryMedia::where('category', $request->category)->max('sort_order') ?? 0;
+            GalleryMedia::where('category', $request->category)->increment('sort_order');
 
             GalleryMedia::create([
                 'category'     => $request->category,
@@ -51,7 +51,7 @@ class GalleryController extends Controller
                 'media_type'   => $mediaType,
                 'disk'         => 'r2',
                 'storage_path' => $path,
-                'sort_order'   => $maxOrder + 1,
+                'sort_order'   => 1,
             ]);
 
             $uploaded++;
@@ -87,7 +87,6 @@ class GalleryController extends Controller
 
     public function destroy(GalleryMedia $gallery)
     {
-        // Delete from R2
         if ($gallery->storage_path) {
             Storage::disk('r2')->delete($gallery->storage_path);
         }
